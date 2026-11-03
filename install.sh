@@ -58,6 +58,8 @@ for v in dark light; do
     "wallpaper/win-kde-$v|$DATA/wallpapers"
   )
 done
+# File Explorer style toolbar (user only; Dolphin ships its own copy in resources)
+((EUID == 0)) || ITEMS+=("dolphin/dolphinui.rc|$DATA/kxmlgui5/dolphin")
 
 for item in "${ITEMS[@]}"; do
   src=$SRC/${item%%|*} dest=${item#*|}/$(basename "${item%%|*}")
@@ -137,6 +139,10 @@ if [[ -n $APPLY ]]; then
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight IAX
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
   fi
+  # Dolphin like File Explorer: Details, newest first, grouped by date, for all
+  # folders (bumping ViewPropsTimestamp resets folders' remembered views).
+  install -Dm644 "$SRC/dolphin/view-defaults.directory" "$DATA/dolphin/view_properties/global/.directory"
+  kwriteconfig6 --file dolphinrc --group General --key ViewPropsTimestamp "$(date '+%Y,%-m,%-d,%-H,%-M,%-S')"
   # The global theme selects Kvantum but cannot pick the Kvantum theme itself.
   if command -v kvantummanager >/dev/null; then
     kvantummanager --set "win-kde-$APPLY"
