@@ -58,6 +58,10 @@ for v in dark light; do
     "wallpaper/win-kde-$v|$DATA/wallpapers"
   )
 done
+# Thin Win11 show desktop area for the end of the taskbar
+ITEMS+=("plasma/plasmoids/io.github.luisagd.win-kde.showdesktop|$DATA/plasma/plasmoids")
+# File Explorer style toolbar (user only; Dolphin ships its own copy in resources)
+((EUID == 0)) || ITEMS+=("dolphin/dolphinui.rc|$DATA/kxmlgui5/dolphin")
 
 for item in "${ITEMS[@]}"; do
   src=$SRC/${item%%|*} dest=${item#*|}/$(basename "${item%%|*}")
@@ -89,16 +93,28 @@ if ((DEPS)); then
   ICONS=$DATA/icons
   if [[ $MODE == uninstall ]]; then
     rm -rf "$ICONS/Win11" "$ICONS/Win11-dark" "$ICONS/Win10OS-cursors"
-    kpackagetool6 --type Plasma/Applet --remove tv.wooti.win11menu >/dev/null 2>&1 || true
+    kpackagetool6 --type Plasma/Applet --remove menu.11.next >/dev/null 2>&1 || true
   else
     icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da)
     mkdir -p "$ICONS"
     (cd "$icons" && ./install.sh -d "$ICONS" >/dev/null 2>&1)
+    # The Win11 set also ships some file-type names (application-pdf, ...) as app
+    # icons; Plasma prefers apps/ on a tie, so a PDF showed the viewer's logo.
+    for theme in "$ICONS/Win11" "$ICONS/Win11-dark"; do
+      find -L "$theme"/apps* \( -name 'application-*' -o -name 'gnome-mime-*' -o -name 'x-office-*' \) -print 2>/dev/null |
+        while read -r f; do
+          [[ -n $(find -L "$theme"/mimes* -name "${f##*/}" -print -quit 2>/dev/null) ]] && rm -f "$f"
+        done
+    done
     cursors=$(fetch yeyushengfan258/Win10OS-cursors 79d13bb90eb9)
     rm -rf "$ICONS/Win10OS-cursors"
     mkdir -p "$ICONS"
     cp -r "$cursors/dist" "$ICONS/Win10OS-cursors"
-    menu=$(fetch wOOtiTv/tv.wooti.win11menu bf09e84983f8)
+    # Win11 Start menu with Recommended, patched for Win11 wording and layout,
+    # no update checks, and working links (patches/menu-11-next.patch).
+    menu=$(fetch Eisteed/menu-11-next eda5490)
+    git -C "$menu" checkout -q -- .
+    git -C "$menu" apply "$SRC/patches/menu-11-next.patch"
     kpackagetool6 --type Plasma/Applet --upgrade "$menu" >/dev/null 2>&1 ||
       kpackagetool6 --type Plasma/Applet --install "$menu" >/dev/null
   fi
@@ -125,6 +141,18 @@ if [[ -n $APPLY ]]; then
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight IAX
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
   fi
+  # Ctrl+Shift+Esc opens System Monitor, like Task Manager on Windows.
+  monitor=(org.kde.plasma-systemmonitor.desktop _launch "System Monitor" "System Monitor")
+  if busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel doRegister as 4 "${monitor[@]}" 2>/dev/null; then
+    busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel \
+      setForeignShortcut asai 4 "${monitor[@]}" 1 $((0x07000000)) >/dev/null
+  else
+    kwriteconfig6 --file kglobalshortcutsrc --group services --group org.kde.plasma-systemmonitor.desktop --key _launch Ctrl+Shift+Esc
+  fi
+  # Dolphin like File Explorer: Details, newest first, grouped by date, for all
+  # folders (bumping ViewPropsTimestamp resets folders' remembered views).
+  install -Dm644 "$SRC/dolphin/view-defaults.directory" "$DATA/dolphin/view_properties/global/.directory"
+  kwriteconfig6 --file dolphinrc --group General --key ViewPropsTimestamp "$(date '+%Y,%-m,%-d,%-H,%-M,%-S')"
   # The global theme selects Kvantum but cannot pick the Kvantum theme itself.
   if command -v kvantummanager >/dev/null; then
     kvantummanager --set "win-kde-$APPLY"

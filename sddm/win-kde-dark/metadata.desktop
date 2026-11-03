@@ -1,8 +1,8 @@
 [SddmGreeterTheme]
 Name=Win11 KDE Dark
-Description=Windows 11 style login screen for KDE Plasma 6
+Description=Windows 11 style lock and sign-in screen for KDE Plasma 6
 Author=yeyushengfan258, luisagd
-Copyright=(c) 2014 David Edmundson (Breeze); yeyushengfan258; luisagd
+Copyright=(c) 2026 luisagd; artwork yeyushengfan258
 License=GPL-3.0-or-later
 Type=sddm-theme
 Version=1.0
