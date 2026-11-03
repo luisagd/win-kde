@@ -1,0 +1,21 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "yeyushengfan258",
+                "Email": "yeyushengfan258@outlook.com"
+            },
+            {
+                "Name": "luisagd"
+            }
+        ],
+        "Description": "Windows 11 style Plasma style (light)",
+        "EnabledByDefault": true,
+        "Id": "win-kde-light",
+        "License": "GPL-3.0",
+        "Name": "Win11 KDE Light",
+        "Version": "1.0",
+        "Website": "https://github.com/luisagd/win-kde"
+    },
+    "X-Plasma-API": "5.0"
+}

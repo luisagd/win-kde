@@ -1,42 +1,45 @@
-## Win11OS KDE Theme
+## Win11 KDE
 
-Win11OS kde is a light clean theme for KDE Plasma desktop.
+Windows 11 look for KDE Plasma 6, with a left-aligned taskbar.
 
-In this repository you'll find:
+Inside:
 
-- Aurorae Themes
-- Kvantum Themes
-- Plasma Color Schemes
-- Plasma Desktop Themes
-- Plasma Look-and-Feel Settings
+- Global themes (dark, light) with the taskbar layout
+- Plasma styles, color schemes and Kvantum themes
+- Aurorae window decorations
+- SDDM login screens and splash screens
+- Wallpapers
 
-### Donate
-
-If you like my project, you can buy me a coffee:
-
-<span class="paypal"><a href="https://www.paypal.me/yeyushengfan258" title="Donate to this project using Paypal"><img src="https://www.paypalobjects.com/webstatic/mktg/Logo/pp-logo-100px.png" alt="PayPal donate button" /></a></span>
-
-## Installation
+## Install
 
 ```sh
-./install.sh
+./install.sh                  # themes, for your user
+./install.sh --sddm           # also the login screens (sudo)
+./install.sh --deps           # also Win11 icons, Win10OS cursors, Win11 Start menu
+./install.sh --apply dark     # apply the dark global theme
+./install.sh --apply dark --layout   # ...and replace your panel with the taskbar
 ```
+
+Packages: [Kvantum](https://github.com/tsujan/Kvantum) and [Klassy](https://github.com/paulmcauley/klassy) (used when installed).
+
+Pinned by `--deps`: [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Win11 Start menu](https://github.com/wOOtiTv/tv.wooti.win11menu).
+
 ## Uninstall
 
 ```sh
-./uninstall.sh
+./install.sh --uninstall --sddm
 ```
+
+## Credits
+
+Fork of [Win11OS-kde](https://github.com/yeyushengfan258/Win11OS-kde) by yeyushengfan258. See [AUTHORS](AUTHORS).
 
 ## License
 
-GNU GPL v3
+GNU GPL v3. The Bloom wallpaper is © Microsoft.
 
-## view
-![view](View-1.png?raw=true)
-![view](View-2.png?raw=true)
-![view](View-3.png?raw=true)
-![view](View-4.png?raw=true)
-![view](View-5.png?raw=true)
-![view](View-6.png?raw=true)
+## View
 
-
+![view](screenshots/View-1.png?raw=true)
+![view](screenshots/View-2.png?raw=true)
+![view](screenshots/View-3.png?raw=true)

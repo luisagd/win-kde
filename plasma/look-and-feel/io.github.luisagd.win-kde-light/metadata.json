@@ -1,0 +1,26 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "yeyushengfan258",
+                "Email": "yeyushengfan258@outlook.com"
+            },
+            {
+                "Name": "luisagd"
+            }
+        ],
+        "Category": "",
+        "Description": "Windows 11 style global theme (light) with a left-aligned taskbar",
+        "EnabledByDefault": true,
+        "Id": "io.github.luisagd.win-kde-light",
+        "License": "GPL-3.0",
+        "Name": "Win11 KDE Light",
+        "Version": "1.0",
+        "Website": "https://github.com/luisagd/win-kde"
+    },
+    "Keywords": "Desktop;Workspace;Appearance;Look and Feel;Logout;Lock;Suspend;Shutdown;Hibernate;",
+    "X-KDE-fallbackPackage": "org.kde.breeze.desktop",
+    "X-Plasma-APIVersion": "2",
+    "X-Plasma-MainScript": "defaults"
+}
