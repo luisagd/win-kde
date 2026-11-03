@@ -32,6 +32,8 @@ clock.currentConfigGroup = ["Appearance"];
 clock.writeConfig("dateDisplayFormat", 2); // date below time
 clock.writeConfig("autoFontAndSize", false); // Win11: two small lines
 clock.writeConfig("fontSize", 9);
+clock.writeConfig("fontWeight", 400);
+clock.writeConfig("fontStyleName", "Regular");
 
 // Wallpaper comes from the Plasma style (plasmarc: defaultWallpaperTheme).
 for (const desktop of desktopsForActivity(currentActivity())) {
