@@ -1,49 +1,88 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Install, link or remove Win11 KDE.
+set -euo pipefail
 
-SRC_DIR=$(cd $(dirname $0) && pwd)
-ROOT_UID=0
+usage() {
+  cat <<'USAGE'
+Usage: ./install.sh [options]
 
-# Destination directory
-if [ "$UID" -eq "$ROOT_UID" ]; then
-  AURORAE_DIR="/usr/share/aurorae/themes"
-  SCHEMES_DIR="/usr/share/color-schemes"
-  PLASMA_DIR="/usr/share/plasma/desktoptheme"
-  LAYOUT_DIR="/usr/share/plasma/layout-templates"
-  LOOKFEEL_DIR="/usr/share/plasma/look-and-feel"
-  KVANTUM_DIR="/usr/share/Kvantum"
-  WALLPAPER_DIR="/usr/share/wallpapers"
-else
-  AURORAE_DIR="$HOME/.local/share/aurorae/themes"
-  SCHEMES_DIR="$HOME/.local/share/color-schemes"
-  PLASMA_DIR="$HOME/.local/share/plasma/desktoptheme"
-  LAYOUT_DIR="$HOME/.local/share/plasma/layout-templates"
-  LOOKFEEL_DIR="$HOME/.local/share/plasma/look-and-feel"
-  KVANTUM_DIR="$HOME/.config/Kvantum"
-  WALLPAPER_DIR="$HOME/.local/share/wallpapers"
-fi
-
-THEME_NAME=Win11OS
-
-[[ ! -d ${AURORAE_DIR} ]] && mkdir -p ${AURORAE_DIR}
-[[ ! -d ${SCHEMES_DIR} ]] && mkdir -p ${SCHEMES_DIR}
-[[ ! -d ${PLASMA_DIR} ]] && mkdir -p ${PLASMA_DIR}
-[[ ! -d ${LOOKFEEL_DIR} ]] && mkdir -p ${LOOKFEEL_DIR}
-[[ ! -d ${KVANTUM_DIR} ]] && mkdir -p ${KVANTUM_DIR}
-[[ ! -d ${WALLPAPER_DIR} ]] && mkdir -p ${WALLPAPER_DIR}
-
-install() {
-  local name=${1}
-
-  cp -r ${SRC_DIR}/aurorae/*                                                         ${AURORAE_DIR}
-  cp -r ${SRC_DIR}/color-schemes/*.colors                                            ${SCHEMES_DIR}
-  cp -r ${SRC_DIR}/Kvantum/*                                                         ${KVANTUM_DIR}
-  cp -r ${SRC_DIR}/plasma/desktoptheme/*                                             ${PLASMA_DIR}
-  cp -r ${SRC_DIR}/plasma/look-and-feel/*                                            ${LOOKFEEL_DIR}
-  cp -r ${SRC_DIR}/wallpaper/*                                                       ${WALLPAPER_DIR}
+  -l, --link            symlink instead of copy (edits apply live; for development)
+  -u, --uninstall       remove everything this script installs
+  -s, --sddm            also install the login screens (asks for sudo)
+  -a, --apply VARIANT   apply the global theme afterwards: dark or light
+      --layout          with --apply, also replace the panel with the Win11 taskbar
+  -h, --help            show this help
+USAGE
 }
 
-echo "Installing '${THEME_NAME} kde themes'..."
+SRC=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+MODE=copy SDDM=0 APPLY="" LAYOUT=0
 
-install "${name:-${THEME_NAME}}"
+while (($#)); do
+  case $1 in
+    -l|--link) MODE="link" ;;
+    -u|--uninstall) MODE="uninstall" ;;
+    -s|--sddm) SDDM=1 ;;
+    -a|--apply) APPLY=${2:-}; shift ;;
+    --layout) LAYOUT=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+  shift
+done
+[[ -z $APPLY || $APPLY == dark || $APPLY == light ]] || { echo "--apply takes dark or light" >&2; exit 2; }
 
-echo "Install finished..."
+if ((EUID == 0)); then
+  DATA=/usr/share KVANTUM=/usr/share/Kvantum
+else
+  DATA=${XDG_DATA_HOME:-$HOME/.local/share} KVANTUM=${XDG_CONFIG_HOME:-$HOME/.config}/Kvantum
+fi
+
+# source (relative to repo) -> destination directory
+ITEMS=()
+for v in dark light; do
+  V=${v^}
+  ITEMS+=(
+    "aurorae/win-kde-$v|$DATA/aurorae/themes"
+    "color-schemes/WinKDE$V.colors|$DATA/color-schemes"
+    "Kvantum/win-kde-$v|$KVANTUM"
+    "plasma/desktoptheme/win-kde-$v|$DATA/plasma/desktoptheme"
+    "plasma/look-and-feel/io.github.luisagd.win-kde-$v|$DATA/plasma/look-and-feel"
+    "wallpaper/win-kde-$v|$DATA/wallpapers"
+  )
+done
+
+for item in "${ITEMS[@]}"; do
+  src=$SRC/${item%%|*} dest=${item#*|}/$(basename "${item%%|*}")
+  rm -rf "$dest"
+  case $MODE in
+    copy) mkdir -p "${dest%/*}"; cp -r "$src" "$dest" ;;
+    link) mkdir -p "${dest%/*}"; ln -s "$src" "$dest" ;;
+  esac
+done
+
+if ((SDDM)); then
+  for v in dark light; do
+    dest=/usr/share/sddm/themes/win-kde-$v
+    sudo rm -rf "$dest"
+    [[ $MODE == uninstall ]] || sudo cp -r "$SRC/sddm/win-kde-$v" "$dest"
+  done
+fi
+
+if [[ $MODE == uninstall ]]; then
+  echo "Removed Win11 KDE."
+  exit 0
+fi
+echo "Installed Win11 KDE ($MODE)."
+
+if [[ -n $APPLY ]]; then
+  args=(--apply "io.github.luisagd.win-kde-$APPLY")
+  ((LAYOUT)) && args+=(--resetLayout)
+  plasma-apply-lookandfeel "${args[@]}"
+  # The global theme selects Kvantum but cannot pick the Kvantum theme itself.
+  if command -v kvantummanager >/dev/null; then
+    kvantummanager --set "win-kde-$APPLY"
+  else
+    echo "Kvantum is not installed; widgets keep the default style." >&2
+  fi
+fi

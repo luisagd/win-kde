@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "yeyushengfan258",
+                "Email": "yeyushengfan258@outlook.com"
+            },
+            {
+                "Name": "luisagd"
+            }
+        ],
+        "Id": "win-kde-dark",
+        "License": "GPL-3.0",
+        "Name": "Win11 KDE Dark"
+    },
+    "X-KDE-PlasmaImageWallpaper-AccentColor": "#0078d4"
+}

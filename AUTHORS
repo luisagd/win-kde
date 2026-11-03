@@ -1,5 +1,11 @@
---------------------------------- Win11OS KDE ------------------------------
+luisagd (https://github.com/luisagd)
+    Plasma 6 port, taskbar layout, installer, fixes
 
- yeyushengfan258 - (https://github.com/yeyushengfan258) - yeyushengfan258@aliyun.com
+yeyushengfan258 (https://github.com/yeyushengfan258)
+    Win11OS-kde: themes, decorations, color schemes, login screen, wallpapers
 
---------------------------------- Win11OS KDE ------------------------------
+KDE (https://kde.org)
+    Breeze SDDM theme (David Edmundson and contributors) and splash (Marco Martin), which the login and splash screens build on
+
+Vince Liuice (https://github.com/vinceliuice) and Tsu Jan (https://github.com/tsujan)
+    Kvantum themes, based on KvAdapta
