@@ -17,12 +17,12 @@ USAGE
 }
 
 SRC=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-MODE=copy SDDM=0 DEPS=0 APPLY="" LAYOUT=0
+MODE=copy MODE_SET=0 SDDM=0 DEPS=0 APPLY="" LAYOUT=0
 
 while (($#)); do
   case $1 in
-    -l|--link) MODE="link" ;;
-    -u|--uninstall) MODE="uninstall" ;;
+    -l|--link) MODE="link" MODE_SET=1 ;;
+    -u|--uninstall) MODE="uninstall" MODE_SET=1 ;;
     -s|--sddm) SDDM=1 ;;
     -d|--deps) DEPS=1 ;;
     -a|--apply) APPLY=${2:-}; shift ;;
@@ -38,6 +38,11 @@ if ((EUID == 0)); then
   DATA=/usr/share KVANTUM=/usr/share/Kvantum
 else
   DATA=${XDG_DATA_HOME:-$HOME/.local/share} KVANTUM=${XDG_CONFIG_HOME:-$HOME/.config}/Kvantum
+fi
+
+# Without --link/--uninstall, keep an existing linked install linked.
+if ((!MODE_SET)) && [[ -L $DATA/plasma/look-and-feel/io.github.luisagd.win-kde-dark ]]; then
+  MODE="link"
 fi
 
 # source (relative to repo) -> destination directory
