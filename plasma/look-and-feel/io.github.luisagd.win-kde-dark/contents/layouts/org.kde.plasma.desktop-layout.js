@@ -38,6 +38,15 @@ clock.writeConfig("dateFormat", "custom");
 clock.writeConfig("customDateFormat", "M/d/yyyy"); // 11/3/2026, as in Win11
 
 // Wallpaper comes from the Plasma style (plasmarc: defaultWallpaperTheme).
+// Desktop right-click, Win11 style: the folder actions (New, Sort, Refresh, Undo),
+// Display settings, Personalize and Open in Terminal; no panel/activity/session items.
+const desktopMenu = {
+    "_context": true, "_display_settings": true, "_wallpaper": true, "_open_terminal": true,
+    "_add panel": false, "_run_command": false, "_lock_screen": false, "_logout": false,
+    "edit mode": false, "manage activities": false, "remove": false,
+};
 for (const desktop of desktopsForActivity(currentActivity())) {
     desktop.wallpaperPlugin = "org.kde.image";
+    desktop.currentConfigGroup = ["ActionPlugins", "0", "RightButton;NoModifier"];
+    for (const key in desktopMenu) desktop.writeConfig(key, desktopMenu[key]);
 }
