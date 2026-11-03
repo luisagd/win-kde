@@ -5,7 +5,8 @@ yeyushengfan258 (https://github.com/yeyushengfan258)
     Win11OS-kde: themes, decorations, color schemes, login screen, wallpapers
 
 KDE (https://kde.org)
-    Breeze splash (Marco Martin), which the splash screen builds on
+    Breeze splash (Marco Martin), which the splash screen builds on;
+    Breeze tooltip and dialog backgrounds (LGPL), used by the Plasma styles
 
 Vince Liuice (https://github.com/vinceliuice) and Tsu Jan (https://github.com/tsujan)
     Kvantum themes, based on KvAdapta
