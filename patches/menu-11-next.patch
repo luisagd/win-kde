@@ -1,8 +1,8 @@
 diff --git a/contents/ui/ActionMenu.qml b/contents/ui/ActionMenu.qml
-index be10f70..d4b5260 100644
+index be10f70..4781ebd 100644
 --- a/contents/ui/ActionMenu.qml
 +++ b/contents/ui/ActionMenu.qml
-@@ -12,6 +12,13 @@ import org.kde.plasma.extras 2.0 as PlasmaExtras
+@@ -12,6 +12,16 @@ import org.kde.plasma.extras 2.0 as PlasmaExtras
  Item {
      id: root
  
@@ -10,13 +10,16 @@ index be10f70..d4b5260 100644
 +    function win11Text(text) {
 +        if (text === "Add to Favorites") return i18n("Pin to Start");
 +        if (text === "Remove from Favorites") return i18n("Unpin from Start");
++        if (text === "Pin to Task Manager") return i18n("Pin to taskbar");
++        if (text === "Unpin from Task Manager") return i18n("Unpin from taskbar");
++        if (text && text.startsWith("Uninstall or Manage Add-Ons")) return i18n("Uninstall");
 +        return text ? text : "";
 +    }
 +
      property QtObject menu
      property Item visualParent
      property variant actionList
-@@ -91,7 +98,7 @@ Item {
+@@ -91,7 +101,7 @@ Item {
  
              property variant actionItem
  
@@ -25,7 +28,7 @@ index be10f70..d4b5260 100644
              icon: actionItem.icon ? actionItem.icon : null
  
              property PlasmaExtras.Menu submenu: PlasmaExtras.Menu {
-@@ -106,7 +113,7 @@ Item {
+@@ -106,7 +116,7 @@ Item {
          PlasmaExtras.MenuItem {
              property variant actionItem
  
@@ -188,8 +191,21 @@ index 398348e..fc204ac 100644
          visible: sessionManager.canShutdown && Plasmoid.configuration.showShutdownButton
      }
  
+diff --git a/contents/ui/ItemGridDelegateColumns.qml b/contents/ui/ItemGridDelegateColumns.qml
+index f2246e5..502a6a6 100644
+--- a/contents/ui/ItemGridDelegateColumns.qml
++++ b/contents/ui/ItemGridDelegateColumns.qml
+@@ -49,6 +49,8 @@ Item {
+             return;
+         }
+         var actionList = (model.actionList !== undefined) ? model.actionList : [];
++        if (actionList.length === 0 && model.sourceRow !== undefined && GridView.view.model.sourceActions)
++            actionList = GridView.view.model.sourceActions(model.sourceRow);
+         Tools.fillActionMenu(i18n, actionMenu, actionList, GridView.view.model.favoritesModel, model.favoriteId);
+         actionMenu.visualParent = item;
+         actionMenu.open(x, y);
 diff --git a/contents/ui/MenuRepresentation.qml b/contents/ui/MenuRepresentation.qml
-index 8c74b66..da1c339 100644
+index 8c74b66..e0169f4 100644
 --- a/contents/ui/MenuRepresentation.qml
 +++ b/contents/ui/MenuRepresentation.qml
 @@ -109,7 +109,7 @@ PlasmaCore.Dialog {
@@ -225,7 +241,28 @@ index 8c74b66..da1c339 100644
          } else if (Plasmoid.location === PlasmaCore.Types.TopEdge) {
              horizMidPoint = screen.x + (screen.width / 2);
              var appletBottomLeft = parent.mapToGlobal(0, parent.height);
-@@ -653,7 +653,7 @@ PlasmaCore.Dialog {
+@@ -640,6 +640,20 @@ PlasmaCore.Dialog {
+             id: allAppsComboModel
+             // Exposes favoritesModel so delegates can Pin/Unpin via the same KActivities model
+             property var favoritesModel: sortedAppsModel.favoritesModel
++
++            // win-kde: these rows are copies without Plasma's app actions (Pin to
++            // Task Manager, Edit, Uninstall, ...); read and run them on the real model.
++            function sourceActions(sourceRow) {
++                if (sourceRow < 0 || !sortedAppsModel.sourceModel)
++                    return [];
++                return sortedAppsModel.data(sortedAppsModel.index(sourceRow, 0), Qt.UserRole + 9) || []; // ActionListRole
++            }
++            function trigger(row, actionId, argument) {
++                var entry = get(row);
++                if (entry && entry.sourceRow >= 0)
++                    sortedAppsModel.trigger(entry.sourceRow, actionId, argument);
++                return false;
++            }
+         }
+ 
+         PC3.TextField {
+@@ -653,7 +667,7 @@ PlasmaCore.Dialog {
                  rightMargin: Kirigami.Units.gridUnit
              }
              focus: true
@@ -234,7 +271,7 @@ index 8c74b66..da1c339 100644
              topPadding: 10
              bottomPadding: 10
              leftPadding: Kirigami.Units.gridUnit + Kirigami.Units.iconSizes.small
-@@ -937,13 +937,13 @@ PlasmaCore.Dialog {
+@@ -937,13 +951,13 @@ PlasmaCore.Dialog {
                              text: {
                                  var first = menuUser.fullName.split(" ")[0];
                                  return first.length > 0
@@ -251,7 +288,7 @@ index 8c74b66..da1c339 100644
                              color: colorWithAlpha(Kirigami.Theme.textColor, 0.45)
                              font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
                          }
-@@ -954,6 +954,7 @@ PlasmaCore.Dialog {
+@@ -954,6 +968,7 @@ PlasmaCore.Dialog {
                      }
  
                      PC3.ToolButton {
@@ -259,7 +296,7 @@ index 8c74b66..da1c339 100644
                          icon.name: "folder-new"
                          display: AbstractButton.IconOnly
                          PC3.ToolTip.text: i18n("New folder")
-@@ -970,7 +971,7 @@ PlasmaCore.Dialog {
+@@ -970,7 +985,7 @@ PlasmaCore.Dialog {
                          id: butttonActionAllApps
                          flat: false
                          iconName: "go-next"
@@ -268,7 +305,7 @@ index 8c74b66..da1c339 100644
                          buttonHeight: 25
                          onClicked: {
                              view.currentIndex = 1;
-@@ -1381,6 +1382,7 @@ PlasmaCore.Dialog {
+@@ -1381,6 +1396,7 @@ PlasmaCore.Dialog {
                          enabled: Plasmoid.configuration.showRecentDocs
  
                          Kirigami.Icon {
@@ -276,7 +313,7 @@ index 8c74b66..da1c339 100644
                              source: 'tag-recents'
                              implicitHeight: Kirigami.Units.iconSizes.smallMedium
                              implicitWidth: Kirigami.Units.iconSizes.smallMedium
-@@ -1389,7 +1391,7 @@ PlasmaCore.Dialog {
+@@ -1389,7 +1405,7 @@ PlasmaCore.Dialog {
                          PlasmaExtras.Heading {
                              color: colorWithAlpha(Kirigami.Theme.textColor, 0.8)
                              level: 5

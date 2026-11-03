@@ -94,6 +94,14 @@ if ((DEPS)); then
     icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da)
     mkdir -p "$ICONS"
     (cd "$icons" && ./install.sh -d "$ICONS" >/dev/null 2>&1)
+    # The Win11 set also ships some file-type names (application-pdf, ...) as app
+    # icons; Plasma prefers apps/ on a tie, so a PDF showed the viewer's logo.
+    for theme in "$ICONS/Win11" "$ICONS/Win11-dark"; do
+      find -L "$theme"/apps* \( -name 'application-*' -o -name 'gnome-mime-*' -o -name 'x-office-*' \) -print 2>/dev/null |
+        while read -r f; do
+          [[ -n $(find -L "$theme"/mimes* -name "${f##*/}" -print -quit 2>/dev/null) ]] && rm -f "$f"
+        done
+    done
     cursors=$(fetch yeyushengfan258/Win10OS-cursors 79d13bb90eb9)
     rm -rf "$ICONS/Win10OS-cursors"
     mkdir -p "$ICONS"
