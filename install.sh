@@ -116,6 +116,8 @@ if ((DEPS)); then
     git -C "$menu" checkout -q -- contents/ui/Footer.qml
     sed -i -e 's|^import org.kde.plasma.private.sessions$|&\nimport org.kde.kcmutils as KCM|' \
       -e 's|Qt.openUrlExternally("file:///usr/share/applications/kcm_users.desktop")|KCM.KCMLauncher.openSystemSettings("kcm_users")|' \
+      -e 's/^        icon.name:  "user-home"$/&\n        visible: false/' \
+      -e 's/^        icon.name: "configure"$/&\n        visible: false/' \
       "$menu/contents/ui/Footer.qml"
     cat > "$menu/contents/ui/code/UpdateChecker.js" <<'JS'
 .pragma library
