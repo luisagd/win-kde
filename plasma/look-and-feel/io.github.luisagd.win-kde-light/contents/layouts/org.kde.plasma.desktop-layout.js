@@ -7,7 +7,7 @@ const start = startMenus.find(id => knownWidgetTypes.indexOf(id) !== -1) || "org
 
 const panel = new Panel;
 panel.location = "bottom";
-panel.height = 2 * Math.ceil(gridUnit * 2.7 / 2);
+panel.height = 48; // Win11 taskbar height
 panel.floating = false;
 
 const menu = panel.addWidget(start);

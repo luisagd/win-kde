@@ -217,7 +217,7 @@ Rectangle {
         QQC2.TextField {
             id: password
             width: 296 * root.s
-            height: 36 * root.s
+            height: 32 * root.s
             anchors.horizontalCenter: parent.horizontalCenter
             echoMode: TextInput.Password
             placeholderText: qsTr("Password")
@@ -226,7 +226,7 @@ Rectangle {
             selectionColor: root.accent
             font.family: root.fontFamily
             font.pixelSize: 15 * root.s
-            leftPadding: 12 * root.s
+            leftPadding: 10 * root.s
             rightPadding: height
             verticalAlignment: TextInput.AlignVCenter
             enabled: !busy.running
@@ -235,9 +235,9 @@ Rectangle {
 
             background: Rectangle {
                 radius: 4 * root.s
-                color: Qt.rgba(1, 1, 1, password.activeFocus ? 0.14 : 0.09)
+                color: password.activeFocus ? Qt.rgba(0.118, 0.118, 0.118, 0.7) : Qt.rgba(1, 1, 1, 0.06)
                 border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.12)
+                border.color: Qt.rgba(1, 1, 1, 0.07)
                 Rectangle {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 2 * root.s
@@ -371,7 +371,7 @@ Rectangle {
         default property alias entries: list.children
         width: 200 * root.s
         height: list.implicitHeight + 8 * root.s
-        radius: 6 * root.s
+        radius: 8 * root.s
         color: Qt.rgba(0.13, 0.13, 0.13, 0.96)
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.08)
