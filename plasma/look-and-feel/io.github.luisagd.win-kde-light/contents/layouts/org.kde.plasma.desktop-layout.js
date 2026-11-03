@@ -34,6 +34,8 @@ clock.writeConfig("autoFontAndSize", false); // Win11: two small lines
 clock.writeConfig("fontSize", 9);
 clock.writeConfig("fontWeight", 400);
 clock.writeConfig("fontStyleName", "Regular");
+clock.writeConfig("dateFormat", "custom");
+clock.writeConfig("customDateFormat", "M/d/yyyy"); // 11/3/2026, as in Win11
 
 // Wallpaper comes from the Plasma style (plasmarc: defaultWallpaperTheme).
 for (const desktop of desktopsForActivity(currentActivity())) {
