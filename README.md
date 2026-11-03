@@ -19,7 +19,7 @@ Inside:
 ./install.sh --apply dark --layout   # ...and replace your panel with the taskbar
 ```
 
-Recommended extras: [Kvantum](https://github.com/tsujan/Kvantum), [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Klassy](https://github.com/paulmcauley/klassy), [Menu 11 Next](https://github.com/Eisteed/menu-11-next).
+Recommended extras: [Kvantum](https://github.com/tsujan/Kvantum), [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Klassy](https://github.com/paulmcauley/klassy), [Win11 Start menu](https://github.com/wOOtiTv/tv.wooti.win11menu).
 
 ## Uninstall
 

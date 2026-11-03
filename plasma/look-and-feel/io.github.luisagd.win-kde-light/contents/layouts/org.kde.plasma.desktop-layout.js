@@ -2,7 +2,7 @@
 // Start | pinned + running apps | system tray | clock | show desktop
 
 // First installed launcher wins; Kickoff ships with Plasma.
-const startMenus = ["menu.11.next", "tv.wooti.win11menu", "org.kde.plasma.kickoff"];
+const startMenus = ["tv.wooti.win11menu", "org.kde.plasma.kickoff"];
 const start = startMenus.find(id => knownWidgetTypes.indexOf(id) !== -1) || "org.kde.plasma.kickoff";
 
 const panel = new Panel;
