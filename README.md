@@ -9,6 +9,7 @@ Inside:
 - Aurorae window decorations
 - SDDM login screens and splash screens
 - Wallpapers
+- Meta+P screen switcher (PC only, Duplicate, Extend, Second screen only)
 
 ## Install
 

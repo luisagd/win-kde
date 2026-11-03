@@ -58,6 +58,8 @@ for v in dark light; do
     "wallpaper/win-kde-$v|$DATA/wallpapers"
   )
 done
+# Win11 "Project" panel for Meta+P (screens/win-kde-project)
+ITEMS+=("screens|$DATA/win-kde")
 # Thin Win11 show desktop area for the end of the taskbar
 ITEMS+=("plasma/plasmoids/io.github.luisagd.win-kde.showdesktop|$DATA/plasma/plasmoids")
 # File Explorer style toolbar (user only; Dolphin ships its own copy in resources)
@@ -71,6 +73,25 @@ for item in "${ITEMS[@]}"; do
     link) mkdir -p "${dest%/*}"; ln -s "$src" "$dest" ;;
   esac
 done
+
+# Hidden launcher entry so Meta+P can start the Project panel
+PROJECT_DESKTOP=$DATA/applications/io.github.luisagd.win-kde.project.desktop
+if [[ $MODE == uninstall ]]; then
+  rm -f "$PROJECT_DESKTOP"
+else
+  mkdir -p "${PROJECT_DESKTOP%/*}"
+  cat > "$PROJECT_DESKTOP" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Project
+Comment=Choose how to use a second screen
+Exec=$DATA/win-kde/screens/win-kde-project
+Icon=video-display
+NoDisplay=true
+StartupNotify=false
+X-KDE-GlobalAccel-CommandShortcut=true
+DESKTOP
+fi
 
 if ((SDDM)); then
   for v in dark light; do
@@ -148,6 +169,15 @@ if [[ -n $APPLY ]]; then
       setForeignShortcut asai 4 "${monitor[@]}" 1 $((0x07000000)) >/dev/null
   else
     kwriteconfig6 --file kglobalshortcutsrc --group services --group org.kde.plasma-systemmonitor.desktop --key _launch Ctrl+Shift+Esc
+  fi
+  # Meta+P opens the Win11 Project panel; KDE's switcher keeps the Display key.
+  project=(io.github.luisagd.win-kde.project.desktop _launch "Project" "Project")
+  kscreen=(org.kde.kscreen.desktop ShowOSD "Display Configuration" "Switch Display")
+  if busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel doRegister as 4 "${project[@]}" 2>/dev/null; then
+    busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel \
+      setForeignShortcut asai 4 "${kscreen[@]}" 1 $((0x010000d1)) >/dev/null
+    busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel \
+      setForeignShortcut asai 4 "${project[@]}" 1 $((0x10000000 | 0x50)) >/dev/null
   fi
   # Dolphin like File Explorer: Details, newest first, grouped by date, for all
   # folders (bumping ViewPropsTimestamp resets folders' remembered views).
