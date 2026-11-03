@@ -89,7 +89,7 @@ if ((DEPS)); then
   ICONS=$DATA/icons
   if [[ $MODE == uninstall ]]; then
     rm -rf "$ICONS/Win11" "$ICONS/Win11-dark" "$ICONS/Win10OS-cursors"
-    kpackagetool6 --type Plasma/Applet --remove tv.wooti.win11menu >/dev/null 2>&1 || true
+    kpackagetool6 --type Plasma/Applet --remove menu.11.next >/dev/null 2>&1 || true
   else
     icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da)
     mkdir -p "$ICONS"
@@ -98,7 +98,18 @@ if ((DEPS)); then
     rm -rf "$ICONS/Win10OS-cursors"
     mkdir -p "$ICONS"
     cp -r "$cursors/dist" "$ICONS/Win10OS-cursors"
-    menu=$(fetch wOOtiTv/tv.wooti.win11menu bf09e84983f8)
+    # Win11 Start menu with Recommended; its GitHub update check is stubbed out
+    # (weather is off by default and needs an optional C++ plugin we don't build).
+    menu=$(fetch Eisteed/menu-11-next eda5490)
+    git -C "$menu" checkout -q -- contents/ui/code/UpdateChecker.js
+    cat > "$menu/contents/ui/code/UpdateChecker.js" <<'JS'
+.pragma library
+// Stubbed by win-kde: no network update checks.
+function checkForUpdates(currentVersion, callback) {}
+function shouldCheckForUpdates(plasmoidConfig) { return false; }
+function recordLastCheckTime(plasmoidConfig) {}
+function formatUpdateStatus(checkResult, currentVersion) { return ""; }
+JS
     kpackagetool6 --type Plasma/Applet --upgrade "$menu" >/dev/null 2>&1 ||
       kpackagetool6 --type Plasma/Applet --install "$menu" >/dev/null
   fi

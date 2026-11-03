@@ -1,8 +1,8 @@
 // Windows 11 style taskbar, left-aligned:
-// Start | pinned + running apps | system tray | clock | show desktop
+// Start | pinned + running apps | system tray | clock
 
 // First installed launcher wins; Kickoff ships with Plasma.
-const startMenus = ["tv.wooti.win11menu", "org.kde.plasma.kickoff"];
+const startMenus = ["menu.11.next", "org.kde.plasma.kickoff"];
 const start = startMenus.find(id => knownWidgetTypes.indexOf(id) !== -1) || "org.kde.plasma.kickoff";
 
 const panel = new Panel;
@@ -17,11 +17,15 @@ tasks.currentConfigGroup = ["General"];
 tasks.writeConfig("launchers", "preferred://filemanager,preferred://browser");
 
 panel.addWidget("org.kde.plasma.marginsseparator");
-panel.addWidget("org.kde.plasma.systemtray");
+// Win11 tray: network, volume, battery and notifications; the rest under the ^.
+const tray = panel.addWidget("org.kde.plasma.systemtray");
+tray.currentConfigGroup = ["General"];
+tray.writeConfig("hiddenItems", "org.kde.plasma.clipboard,org.kde.kscreen,org.kde.plasma.keyboardlayout,org.kde.plasma.printmanager,org.kde.kdeconnect,org.kde.plasma.vault,org.kde.plasma.brightness,org.kde.plasma.keyboardindicator,org.kde.plasma.mediacontroller,org.kde.plasma.bluetooth,org.kde.plasma.weather,org.kde.plasma.cameraindicator,org.kde.plasma.manage-inputmethod,org.kde.kupapplet,org.kde.plasma.kclock_1x2");
 const clock = panel.addWidget("org.kde.plasma.digitalclock");
 clock.currentConfigGroup = ["Appearance"];
 clock.writeConfig("dateDisplayFormat", 2); // date below time
-panel.addWidget("org.kde.plasma.showdesktop");
+clock.writeConfig("autoFontAndSize", false); // Win11: two small lines
+clock.writeConfig("fontSize", 9);
 
 // Wallpaper comes from the Plasma style (plasmarc: defaultWallpaperTheme).
 for (const desktop of desktopsForActivity(currentActivity())) {
