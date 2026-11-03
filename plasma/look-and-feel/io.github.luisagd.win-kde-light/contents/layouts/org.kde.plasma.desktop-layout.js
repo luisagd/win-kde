@@ -26,8 +26,26 @@ panel.addWidget("org.kde.plasma.marginsseparator");
 // Win11 tray: network, volume, battery and notifications; the rest under the ^.
 const tray = panel.addWidget("org.kde.plasma.systemtray");
 tray.currentConfigGroup = ["General"];
-tray.writeConfig("hiddenItems", "org.kde.plasma.clipboard,org.kde.kscreen,org.kde.plasma.keyboardlayout,org.kde.plasma.printmanager,org.kde.kdeconnect,org.kde.plasma.vault,org.kde.plasma.brightness,org.kde.plasma.keyboardindicator,org.kde.plasma.mediacontroller,org.kde.plasma.bluetooth,org.kde.plasma.weather,org.kde.plasma.cameraindicator,org.kde.plasma.manage-inputmethod,org.kde.kupapplet,org.kde.plasma.kclock_1x2");
-tray.writeConfig("shownItems", "org.kde.plasma.networkmanagement,org.kde.plasma.volume,org.kde.plasma.battery");
+const quickSettings = "com.github.luciotorelli.quicksettings";
+const hasQuickSettings = knownWidgetTypes.indexOf(quickSettings) !== -1;
+// Network and volume always show; with Quick Settings, battery and Bluetooth live in it.
+tray.writeConfig("hiddenItems", "org.kde.plasma.clipboard,org.kde.kscreen,org.kde.plasma.keyboardlayout,org.kde.plasma.printmanager,org.kde.kdeconnect,org.kde.plasma.vault,org.kde.plasma.brightness,org.kde.plasma.keyboardindicator,org.kde.plasma.mediacontroller,org.kde.plasma.bluetooth,org.kde.plasma.weather,org.kde.plasma.cameraindicator,org.kde.plasma.manage-inputmethod,org.kde.kupapplet,org.kde.plasma.kclock_1x2"
+    + (hasQuickSettings ? ",org.kde.plasma.battery,org.kde.plasma.bluetooth" : ""));
+tray.writeConfig("shownItems", "org.kde.plasma.networkmanagement,org.kde.plasma.volume"
+    + (hasQuickSettings ? "" : ",org.kde.plasma.battery"));
+
+// Win11 Quick Settings button between the tray and the clock.
+if (hasQuickSettings) {
+    const qs = panel.addWidget(quickSettings);
+    qs.currentConfigGroup = ["General"];
+    const qsConfig = {
+        panelShowPercentage: true, pillRadius: 4, useThemeAccent: true,
+        showWifi: true, showBluetooth: true, showAirplane: true, showNightLight: true, showPower: true,
+        showVolume: true, showBrightness: true,
+        showFan: false, showAwake: false, showWired: false, showVpn: false, showMonitorContrast: false,
+    };
+    for (const key in qsConfig) qs.writeConfig(key, qsConfig[key]);
+}
 const clock = panel.addWidget("org.kde.plasma.digitalclock");
 clock.currentConfigGroup = ["Appearance"];
 clock.writeConfig("dateDisplayFormat", 2); // date below time

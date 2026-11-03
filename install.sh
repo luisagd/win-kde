@@ -92,6 +92,7 @@ if ((DEPS)); then
   if [[ $MODE == uninstall ]]; then
     rm -rf "$ICONS/Win11" "$ICONS/Win11-dark" "$ICONS/Win10OS-cursors"
     kpackagetool6 --type Plasma/Applet --remove menu.11.next >/dev/null 2>&1 || true
+    kpackagetool6 --type Plasma/Applet --remove com.github.luciotorelli.quicksettings >/dev/null 2>&1 || true
   else
     icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da)
     mkdir -p "$ICONS"
@@ -115,6 +116,10 @@ if ((DEPS)); then
     git -C "$menu" apply "$SRC/patches/menu-11-next.patch"
     kpackagetool6 --type Plasma/Applet --upgrade "$menu" >/dev/null 2>&1 ||
       kpackagetool6 --type Plasma/Applet --install "$menu" >/dev/null
+    # Win11 Quick Settings panel (no license upstream, so it is fetched, never vendored).
+    qs=$(fetch luciotorelli/quicksettings-plasma 2357edecda0c)
+    kpackagetool6 --type Plasma/Applet --upgrade "$qs/package" >/dev/null 2>&1 ||
+      kpackagetool6 --type Plasma/Applet --install "$qs/package" >/dev/null
   fi
 fi
 
