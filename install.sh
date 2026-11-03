@@ -109,7 +109,14 @@ if ((DEPS)); then
       -e 's/i18n("Recent documents")/i18n("Recommended")/' \
       -e 's/var offset = Kirigami.Units.smallSpacing;/var offset = 0;/' \
       -e 's/height - offset - panelSvg.margins.top;/height - offset;/' \
+      -e 's/^            if (weatherCard) {$/            if (weatherCard \&\& typeof weatherCard.updateWeather === "function") {/' \
       "$menu/contents/ui/MenuRepresentation.qml"
+    # Clicking the user name opens System Settings > Users (upstream opens the
+    # .desktop file as a document, which shows a "Choose Application" dialog).
+    git -C "$menu" checkout -q -- contents/ui/Footer.qml
+    sed -i -e 's|^import org.kde.plasma.private.sessions$|&\nimport org.kde.kcmutils as KCM|' \
+      -e 's|Qt.openUrlExternally("file:///usr/share/applications/kcm_users.desktop")|KCM.KCMLauncher.openSystemSettings("kcm_users")|' \
+      "$menu/contents/ui/Footer.qml"
     cat > "$menu/contents/ui/code/UpdateChecker.js" <<'JS'
 .pragma library
 // Stubbed by win-kde: no network update checks.
