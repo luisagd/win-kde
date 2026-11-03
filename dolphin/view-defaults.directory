@@ -4,7 +4,7 @@ SortFoldersFirst=false
 SortOrder=1
 SortRole=modificationtime
 Version=4
-ViewMode=1
+ViewMode=2
 VisibleRoles=Icons_text,Details_text,Details_modificationtime,Details_type,Details_size
 
 [Settings]

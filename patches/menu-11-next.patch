@@ -1,5 +1,5 @@
 diff --git a/contents/ui/ActionMenu.qml b/contents/ui/ActionMenu.qml
-index be10f70..4781ebd 100644
+index be10f70..180d565 100644
 --- a/contents/ui/ActionMenu.qml
 +++ b/contents/ui/ActionMenu.qml
 @@ -12,6 +12,16 @@ import org.kde.plasma.extras 2.0 as PlasmaExtras
@@ -19,7 +19,36 @@ index be10f70..4781ebd 100644
      property QtObject menu
      property Item visualParent
      property variant actionList
-@@ -91,7 +101,7 @@ Item {
+@@ -54,8 +64,27 @@ Item {
+         fillMenu(menu, actionList);
+     }
+ 
++    // win-kde: Win11 keeps app menus short (pin, app tasks, uninstall)
++    readonly property var hiddenActions: ["addToDesktop", "addToPanel", "editApplication", "hideApplication",
++        "_kicker_recentDocument", "_kicker_forgetRecentDocuments", "forget", "forgetAll"]
++
++    function win11Items(items) {
++        var kept = [];
++        for (var i = 0; i < items.length; i++) {
++            var it = items[i];
++            if (hiddenActions.indexOf(it.actionId) !== -1) continue;
++            var divider = it.type === "separator" || it.type === "title";
++            if (divider && (kept.length === 0 || kept[kept.length - 1].type === "separator")) continue;
++            if (it.type === "title" && kept.length && kept[kept.length - 1].type === "title") kept.pop();
++            kept.push(it);
++        }
++        while (kept.length && (kept[kept.length - 1].type === "separator" || kept[kept.length - 1].type === "title"))
++            kept.pop();
++        return kept;
++    }
++
+     function fillMenu(menu, items) {
+-        items.forEach(function(actionItem) {
++        win11Items(Array.from(items)).forEach(function(actionItem) {
+             if (actionItem.subActions) {
+                 // This is a menu
+                 var submenuItem = contextSubmenuItemComponent.createObject(
+@@ -91,7 +120,7 @@ Item {
  
              property variant actionItem
  
@@ -28,7 +57,7 @@ index be10f70..4781ebd 100644
              icon: actionItem.icon ? actionItem.icon : null
  
              property PlasmaExtras.Menu submenu: PlasmaExtras.Menu {
-@@ -106,7 +116,7 @@ Item {
+@@ -106,7 +135,7 @@ Item {
          PlasmaExtras.MenuItem {
              property variant actionItem
  

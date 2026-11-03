@@ -143,6 +143,8 @@ if [[ -n $APPLY ]]; then
   # folders (bumping ViewPropsTimestamp resets folders' remembered views).
   install -Dm644 "$SRC/dolphin/view-defaults.directory" "$DATA/dolphin/view_properties/global/.directory"
   kwriteconfig6 --file dolphinrc --group General --key ViewPropsTimestamp "$(date '+%Y,%-m,%-d,%-H,%-M,%-S')"
+  # Drop Dolphin's saved toolbar placement so the two-row command bar applies.
+  kwriteconfig6 --file "${XDG_STATE_HOME:-$HOME/.local/state}/dolphinstaterc" --group State --key State --delete
   # The global theme selects Kvantum but cannot pick the Kvantum theme itself.
   if command -v kvantummanager >/dev/null; then
     kvantummanager --set "win-kde-$APPLY"
