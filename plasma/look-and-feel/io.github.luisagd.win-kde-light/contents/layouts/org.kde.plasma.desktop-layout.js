@@ -1,5 +1,5 @@
 // Windows 11 style taskbar, left-aligned:
-// Start | pinned + running apps | system tray | clock
+// Start | pinned + running apps | system tray | clock | (invisible) show desktop
 
 // First installed launcher wins; Kickoff ships with Plasma.
 const startMenus = ["menu.11.next", "org.kde.plasma.kickoff"];
@@ -36,6 +36,11 @@ clock.writeConfig("fontWeight", 400);
 clock.writeConfig("fontStyleName", "Regular");
 clock.writeConfig("dateFormat", "custom");
 clock.writeConfig("customDateFormat", "M/d/yyyy"); // 11/3/2026, as in Win11
+
+// Win11: clicking the far right of the taskbar shows the desktop (invisible button).
+const showDesktop = panel.addWidget("org.kde.plasma.showdesktop");
+showDesktop.currentConfigGroup = ["General"];
+showDesktop.writeConfig("icon", "");
 
 // Wallpaper comes from the Plasma style (plasmarc: defaultWallpaperTheme).
 // Desktop right-click, Win11 style: the folder actions (New, Sort, Refresh, Undo),
