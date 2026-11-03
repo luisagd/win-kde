@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "luisagd" }],
+        "Category": "Windows and Tasks",
+        "Description": "Thin Windows 11 style show desktop area for the end of the taskbar",
+        "Icon": "user-desktop",
+        "Id": "io.github.luisagd.win-kde.showdesktop",
+        "License": "GPL-3.0",
+        "Name": "Win11 Show Desktop",
+        "Version": "1.0",
+        "Website": "https://github.com/luisagd/win-kde"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

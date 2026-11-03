@@ -39,9 +39,14 @@ clock.writeConfig("dateFormat", "custom");
 clock.writeConfig("customDateFormat", "M/d/yyyy"); // 11/3/2026, as in Win11
 
 // Win11: clicking the far right of the taskbar shows the desktop (invisible button).
-const showDesktop = panel.addWidget("org.kde.plasma.showdesktop");
-showDesktop.currentConfigGroup = ["General"];
-showDesktop.writeConfig("icon", "");
+const thinShowDesktop = "io.github.luisagd.win-kde.showdesktop";
+if (knownWidgetTypes.indexOf(thinShowDesktop) !== -1) {
+    panel.addWidget(thinShowDesktop);
+} else {
+    const showDesktop = panel.addWidget("org.kde.plasma.showdesktop");
+    showDesktop.currentConfigGroup = ["General"];
+    showDesktop.writeConfig("icon", "");
+}
 
 // Wallpaper comes from the Plasma style (plasmarc: defaultWallpaperTheme).
 // Desktop right-click, Win11 style: the folder actions (New, Sort, Refresh, Undo),
