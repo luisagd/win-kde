@@ -3,7 +3,8 @@
     SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-// A thin area at the end of the taskbar that toggles the desktop, like Windows 11.
+// A thin area at the end of the taskbar, marked by a short line, that toggles
+// the desktop like Windows 11.
 import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
@@ -42,8 +43,7 @@ PlasmoidItem {
             width: 1
             height: parent.height * 0.5
             color: Kirigami.Theme.textColor
-            opacity: parent.containsMouse ? 0.4 : 0
-            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+            opacity: 0.4
         }
     }
 }
