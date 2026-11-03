@@ -16,6 +16,7 @@ if (start === "menu.11.next") {
     menu.writeConfig("icon", "start-here");      // Windows logo in the Win11 icon theme
     menu.writeConfig("displayPosition", 0);      // open above the Start button
     menu.writeConfig("showAtCenter", false);
+    menu.writeConfig("numberRows", 3);           // Win11: three rows of pinned apps
 }
 
 const tasks = panel.addWidget("org.kde.plasma.icontasks");

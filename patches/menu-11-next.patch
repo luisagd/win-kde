@@ -275,9 +275,18 @@ index f2246e5..502a6a6 100644
          actionMenu.visualParent = item;
          actionMenu.open(x, y);
 diff --git a/contents/ui/MenuRepresentation.qml b/contents/ui/MenuRepresentation.qml
-index 8c74b66..e0169f4 100644
+index 8c74b66..c1965c1 100644
 --- a/contents/ui/MenuRepresentation.qml
 +++ b/contents/ui/MenuRepresentation.qml
+@@ -85,7 +85,7 @@ PlasmaCore.Dialog {
+     }
+ 
+     property int cellSizeHeight: iconSize + Kirigami.Units.gridUnit * 2 + (2 * Math.max(highlightItemSvg.margins.top + highlightItemSvg.margins.bottom, highlightItemSvg.margins.left + highlightItemSvg.margins.right))
+-    property int cellSizeWidth: cellSizeHeight + Kirigami.Units.gridUnit
++    property int cellSizeWidth: cellSizeHeight + Kirigami.Units.gridUnit / 2 // win-kde: Win11-sized grid
+ 
+     property bool searching: (searchField.text != "")
+ 
 @@ -109,7 +109,7 @@ PlasmaCore.Dialog {
              if (Plasmoid.configuration.allAppsViewMode === 2) {
                  ensureCategoryModel();
@@ -341,6 +350,15 @@ index 8c74b66..e0169f4 100644
              topPadding: 10
              bottomPadding: 10
              leftPadding: Kirigami.Units.gridUnit + Kirigami.Units.iconSizes.small
+@@ -902,7 +916,7 @@ PlasmaCore.Dialog {
+             width: rootItem.widthComputed / 0.1
+             height: (root.cellSizeHeight * Plasmoid.configuration.numberRows)
+                   + (topRow.height * 2)
+-                  + ((docsIconSize + Kirigami.Units.largeSpacing) * 5)
++                  + ((docsIconSize + Kirigami.Units.largeSpacing) * 3) // win-kde: Recommended shows 3 rows
+                   + (3 * Kirigami.Units.largeSpacing)
+                   + Kirigami.Units.gridUnit
+                   + Kirigami.Units.largeSpacing * 2
 @@ -937,13 +951,13 @@ PlasmaCore.Dialog {
                              text: {
                                  var first = menuUser.fullName.split(" ")[0];
