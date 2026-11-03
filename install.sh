@@ -139,6 +139,14 @@ if [[ -n $APPLY ]]; then
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight IAX
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
   fi
+  # Ctrl+Shift+Esc opens System Monitor, like Task Manager on Windows.
+  monitor=(org.kde.plasma-systemmonitor.desktop _launch "System Monitor" "System Monitor")
+  if busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel doRegister as 4 "${monitor[@]}" 2>/dev/null; then
+    busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel \
+      setForeignShortcut asai 4 "${monitor[@]}" 1 $((0x07000000)) >/dev/null
+  else
+    kwriteconfig6 --file kglobalshortcutsrc --group services --group org.kde.plasma-systemmonitor.desktop --key _launch Ctrl+Shift+Esc
+  fi
   # Dolphin like File Explorer: Details, newest first, grouped by date, for all
   # folders (bumping ViewPropsTimestamp resets folders' remembered views).
   install -Dm644 "$SRC/dolphin/view-defaults.directory" "$DATA/dolphin/view_properties/global/.directory"
