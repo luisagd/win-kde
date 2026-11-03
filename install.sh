@@ -98,35 +98,11 @@ if ((DEPS)); then
     rm -rf "$ICONS/Win10OS-cursors"
     mkdir -p "$ICONS"
     cp -r "$cursors/dist" "$ICONS/Win10OS-cursors"
-    # Win11 Start menu with Recommended; its GitHub update check is stubbed out
-    # (weather is off by default and needs an optional C++ plugin we don't build).
+    # Win11 Start menu with Recommended, patched for Win11 wording and layout,
+    # no update checks, and working links (patches/menu-11-next.patch).
     menu=$(fetch Eisteed/menu-11-next eda5490)
-    git -C "$menu" checkout -q -- contents/ui/code/UpdateChecker.js contents/ui/MenuRepresentation.qml
-    # Win11 wording: "Pinned" header instead of a greeting, "Recommended" section.
-    sed -i -e 's/? rootItem.timeGreeting + ", " + first/? i18n("Pinned")/' \
-      -e 's/: rootItem.timeGreeting;/: i18n("Pinned");/' \
-      -e '/id: headLabelGreeting/,/defaultFont.pointSize \* 0.8/ s/text: i18n("Pinned")/visible: false/' \
-      -e 's/i18n("Recent documents")/i18n("Recommended")/' \
-      -e 's/var offset = Kirigami.Units.smallSpacing;/var offset = 0;/' \
-      -e 's/height - offset - panelSvg.margins.top;/height - offset;/' \
-      -e 's/^            if (weatherCard) {$/            if (weatherCard \&\& typeof weatherCard.updateWeather === "function") {/' \
-      "$menu/contents/ui/MenuRepresentation.qml"
-    # Clicking the user name opens System Settings > Users (upstream opens the
-    # .desktop file as a document, which shows a "Choose Application" dialog).
-    git -C "$menu" checkout -q -- contents/ui/Footer.qml
-    sed -i -e 's|^import org.kde.plasma.private.sessions$|&\nimport org.kde.kcmutils as KCM|' \
-      -e 's|Qt.openUrlExternally("file:///usr/share/applications/kcm_users.desktop")|KCM.KCMLauncher.openSystemSettings("kcm_users")|' \
-      -e 's/^        icon.name:  "user-home"$/&\n        visible: false/' \
-      -e 's/^        icon.name: "configure"$/&\n        visible: false/' \
-      "$menu/contents/ui/Footer.qml"
-    cat > "$menu/contents/ui/code/UpdateChecker.js" <<'JS'
-.pragma library
-// Stubbed by win-kde: no network update checks.
-function checkForUpdates(currentVersion, callback) {}
-function shouldCheckForUpdates(plasmoidConfig) { return false; }
-function recordLastCheckTime(plasmoidConfig) {}
-function formatUpdateStatus(checkResult, currentVersion) { return ""; }
-JS
+    git -C "$menu" checkout -q -- .
+    git -C "$menu" apply "$SRC/patches/menu-11-next.patch"
     kpackagetool6 --type Plasma/Applet --upgrade "$menu" >/dev/null 2>&1 ||
       kpackagetool6 --type Plasma/Applet --install "$menu" >/dev/null
   fi
