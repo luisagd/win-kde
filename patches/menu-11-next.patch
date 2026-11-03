@@ -38,7 +38,7 @@ index be10f70..4781ebd 100644
              separator : actionItem.type === "separator"
              section   : actionItem.type === "title"
 diff --git a/contents/ui/Footer.qml b/contents/ui/Footer.qml
-index 398348e..fc204ac 100644
+index 398348e..95d73df 100644
 --- a/contents/ui/Footer.qml
 +++ b/contents/ui/Footer.qml
 @@ -19,6 +19,8 @@ import org.kde.plasma.components as PlasmaComponents3
@@ -140,7 +140,7 @@ index 398348e..fc204ac 100644
      }
  
      PlasmaComponents3.ToolButton {
-@@ -165,19 +159,39 @@ RowLayout{
+@@ -165,19 +159,42 @@ RowLayout{
          icon.width: 24
          icon.height: 24
          icon.name:  "system-reboot"
@@ -153,36 +153,39 @@ index 398348e..fc204ac 100644
 -        visible: sessionManager.canReboot && Plasmoid.configuration.showRestartButton
      }
      PlasmaComponents3.ToolButton {
++        id: powerButton
              MouseArea {
                  cursorShape: Qt.PointingHandCursor
                  anchors.fill: parent
 -                onClicked: sessionManager.requestShutdown()
-+                onClicked: powerMenu.popup(parent, parent.width - powerMenu.implicitWidth, -powerMenu.implicitHeight)
++                onClicked: powerMenu.open(0, 0)
                  }
-+        PlasmaComponents3.Menu {
++        // win-kde: native menu so it follows the color scheme (flips above the button)
++        PlasmaExtras.Menu {
 +            id: powerMenu
-+            PlasmaComponents3.MenuItem {
++            visualParent: powerButton
++            PlasmaExtras.MenuItem {
 +                text: i18n("Sleep")
-+                icon.name: "system-suspend"
++                icon: "system-suspend"
 +                visible: sessionManager.canSuspend
-+                onTriggered: sessionManager.suspend()
++                onClicked: sessionManager.suspend()
 +            }
-+            PlasmaComponents3.MenuItem {
++            PlasmaExtras.MenuItem {
 +                text: i18n("Shut down")
-+                icon.name: "system-shutdown"
-+                onTriggered: sessionManager.requestShutdown()
++                icon: "system-shutdown"
++                onClicked: sessionManager.requestShutdown()
 +            }
-+            PlasmaComponents3.MenuItem {
++            PlasmaExtras.MenuItem {
 +                text: i18n("Restart")
-+                icon.name: "system-reboot"
++                icon: "system-reboot"
 +                visible: sessionManager.canReboot
-+                onTriggered: sessionManager.requestReboot()
++                onClicked: sessionManager.requestReboot()
 +            }
 +        }
          icon.width: 24
          icon.height: 24
          icon.name:  "system-shutdown"
-@@ -185,7 +199,7 @@ RowLayout{
+@@ -185,7 +202,7 @@ RowLayout{
          PlasmaComponents3.ToolTip.delay: 1000
          PlasmaComponents3.ToolTip.timeout: 1000
          PlasmaComponents3.ToolTip.visible: hovered
