@@ -90,6 +90,7 @@ Icon=video-display
 NoDisplay=true
 StartupNotify=false
 X-KDE-GlobalAccel-CommandShortcut=true
+X-KDE-Shortcuts=Meta+P
 DESKTOP
 fi
 
