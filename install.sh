@@ -101,7 +101,13 @@ if ((DEPS)); then
     # Win11 Start menu with Recommended; its GitHub update check is stubbed out
     # (weather is off by default and needs an optional C++ plugin we don't build).
     menu=$(fetch Eisteed/menu-11-next eda5490)
-    git -C "$menu" checkout -q -- contents/ui/code/UpdateChecker.js
+    git -C "$menu" checkout -q -- contents/ui/code/UpdateChecker.js contents/ui/MenuRepresentation.qml
+    # Win11 wording: "Pinned" header instead of a greeting, "Recommended" section.
+    sed -i -e 's/? rootItem.timeGreeting + ", " + first/? i18n("Pinned")/' \
+      -e 's/: rootItem.timeGreeting;/: i18n("Pinned");/' \
+      -e '/id: headLabelGreeting/,/defaultFont.pointSize \* 0.8/ s/text: i18n("Pinned")/visible: false/' \
+      -e 's/i18n("Recent documents")/i18n("Recommended")/' \
+      "$menu/contents/ui/MenuRepresentation.qml"
     cat > "$menu/contents/ui/code/UpdateChecker.js" <<'JS'
 .pragma library
 // Stubbed by win-kde: no network update checks.

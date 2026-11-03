@@ -10,7 +10,13 @@ panel.location = "bottom";
 panel.height = 2 * Math.ceil(gridUnit * 2.7 / 2);
 panel.floating = false;
 
-panel.addWidget(start);
+const menu = panel.addWidget(start);
+if (start === "menu.11.next") {
+    menu.currentConfigGroup = ["General"];
+    menu.writeConfig("icon", "start-here");      // Windows logo in the Win11 icon theme
+    menu.writeConfig("displayPosition", 0);      // open above the Start button
+    menu.writeConfig("showAtCenter", false);
+}
 
 const tasks = panel.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
