@@ -107,6 +107,8 @@ if ((DEPS)); then
       -e 's/: rootItem.timeGreeting;/: i18n("Pinned");/' \
       -e '/id: headLabelGreeting/,/defaultFont.pointSize \* 0.8/ s/text: i18n("Pinned")/visible: false/' \
       -e 's/i18n("Recent documents")/i18n("Recommended")/' \
+      -e 's/var offset = Kirigami.Units.smallSpacing;/var offset = 0;/' \
+      -e 's/height - offset - panelSvg.margins.top;/height - offset;/' \
       "$menu/contents/ui/MenuRepresentation.qml"
     cat > "$menu/contents/ui/code/UpdateChecker.js" <<'JS'
 .pragma library
