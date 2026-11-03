@@ -9,6 +9,7 @@ Usage: ./install.sh [options]
   -l, --link            symlink instead of copy (edits apply live; for development)
   -u, --uninstall       remove everything this script installs
   -s, --sddm            also install the login screens (asks for sudo)
+  -d, --deps            also install Win11 icons, Win10OS cursors and the Win11 Start menu
   -a, --apply VARIANT   apply the global theme afterwards: dark or light
       --layout          with --apply, also replace the panel with the Win11 taskbar
   -h, --help            show this help
@@ -16,13 +17,14 @@ USAGE
 }
 
 SRC=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-MODE=copy SDDM=0 APPLY="" LAYOUT=0
+MODE=copy SDDM=0 DEPS=0 APPLY="" LAYOUT=0
 
 while (($#)); do
   case $1 in
     -l|--link) MODE="link" ;;
     -u|--uninstall) MODE="uninstall" ;;
     -s|--sddm) SDDM=1 ;;
+    -d|--deps) DEPS=1 ;;
     -a|--apply) APPLY=${2:-}; shift ;;
     --layout) LAYOUT=1 ;;
     -h|--help) usage; exit 0 ;;
@@ -69,6 +71,34 @@ if ((SDDM)); then
   done
 fi
 
+# Third-party pieces, pinned to known-good commits.
+fetch() { # fetch <github owner/repo> <commit> -> prints checkout dir
+  local dir=${XDG_CACHE_HOME:-$HOME/.cache}/win-kde/${1#*/}
+  [[ -d $dir/.git ]] || git clone -q "https://github.com/$1" "$dir"
+  git -C "$dir" fetch -q origin "$2" 2>/dev/null || true
+  git -C "$dir" -c advice.detachedHead=false checkout -q "$2"
+  echo "$dir"
+}
+
+if ((DEPS)); then
+  ICONS=$DATA/icons
+  if [[ $MODE == uninstall ]]; then
+    rm -rf "$ICONS/Win11" "$ICONS/Win11-dark" "$ICONS/Win10OS-cursors"
+    kpackagetool6 --type Plasma/Applet --remove tv.wooti.win11menu >/dev/null 2>&1 || true
+  else
+    icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da)
+    mkdir -p "$ICONS"
+    (cd "$icons" && ./install.sh -d "$ICONS" >/dev/null 2>&1)
+    cursors=$(fetch yeyushengfan258/Win10OS-cursors 79d13bb90eb9)
+    rm -rf "$ICONS/Win10OS-cursors"
+    mkdir -p "$ICONS"
+    cp -r "$cursors/dist" "$ICONS/Win10OS-cursors"
+    menu=$(fetch wOOtiTv/tv.wooti.win11menu bf09e84983f8)
+    kpackagetool6 --type Plasma/Applet --upgrade "$menu" >/dev/null 2>&1 ||
+      kpackagetool6 --type Plasma/Applet --install "$menu" >/dev/null
+  fi
+fi
+
 if [[ $MODE == uninstall ]]; then
   echo "Removed Win11 KDE."
   exit 0
@@ -79,6 +109,17 @@ if [[ -n $APPLY ]]; then
   args=(--apply "io.github.luisagd.win-kde-$APPLY")
   ((LAYOUT)) && args+=(--resetLayout)
   plasma-apply-lookandfeel "${args[@]}"
+  # Klassy draws real rounded corners and blurred title bars; Aurorae is the fallback.
+  if command -v klassy-settings >/dev/null; then
+    preset=$(find /usr/lib*/qt6/plugins -name Defenestrated_11.klpw -print -quit 2>/dev/null)
+    [[ -n $preset ]] && klassy-settings --import-preset "$preset" >/dev/null 2>&1 || true
+    klassy-settings --load-windeco-preset "Defenestrated 11" >/dev/null 2>&1 || true
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library org.kde.klassy
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme Klassy
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight IAX
+    qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+  fi
   # The global theme selects Kvantum but cannot pick the Kvantum theme itself.
   if command -v kvantummanager >/dev/null; then
     kvantummanager --set "win-kde-$APPLY"

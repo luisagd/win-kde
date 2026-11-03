@@ -15,11 +15,14 @@ Inside:
 ```sh
 ./install.sh                  # themes, for your user
 ./install.sh --sddm           # also the login screens (sudo)
+./install.sh --deps           # also Win11 icons, Win10OS cursors, Win11 Start menu
 ./install.sh --apply dark     # apply the dark global theme
 ./install.sh --apply dark --layout   # ...and replace your panel with the taskbar
 ```
 
-Recommended extras: [Kvantum](https://github.com/tsujan/Kvantum), [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Klassy](https://github.com/paulmcauley/klassy), [Win11 Start menu](https://github.com/wOOtiTv/tv.wooti.win11menu).
+Packages: [Kvantum](https://github.com/tsujan/Kvantum) and [Klassy](https://github.com/paulmcauley/klassy) (used when installed).
+
+Pinned by `--deps`: [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Win11 Start menu](https://github.com/wOOtiTv/tv.wooti.win11menu).
 
 ## Uninstall
 
