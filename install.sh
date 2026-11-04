@@ -97,8 +97,11 @@ fi
 if ((SDDM)); then
   for v in dark light; do
     dest=/usr/share/sddm/themes/win-kde-$v
+    user_conf=$(sudo cat "$dest/theme.conf.user" 2>/dev/null || true) # per-machine overrides
     sudo rm -rf "$dest"
-    [[ $MODE == uninstall ]] || sudo cp -r "$SRC/sddm/win-kde-$v" "$dest"
+    [[ $MODE == uninstall ]] && continue
+    sudo cp -r "$SRC/sddm/win-kde-$v" "$dest"
+    [[ -z $user_conf ]] || printf '%s\n' "$user_conf" | sudo tee "$dest/theme.conf.user" >/dev/null
   done
 fi
 

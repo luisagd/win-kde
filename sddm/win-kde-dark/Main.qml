@@ -15,7 +15,8 @@ Rectangle {
     height: 1080
     color: "black"
 
-    readonly property real s: Math.max(0.5, height / 1080)
+    // Size factor: theme.conf "scale" (e.g. 2 to match Windows at 200%), else from screen height.
+    readonly property real s: Number(config.scale) > 0 ? Number(config.scale) : Math.max(0.5, height / 1080)
     readonly property color accent: config.accentColor || "#0078d4"
     readonly property string fontFamily: config.font || Qt.application.font.family
     readonly property url defaultFace: Qt.resolvedUrl("faces/.face.icon")
