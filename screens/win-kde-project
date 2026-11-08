@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Windows 11 style "Project" panel (Meta+P) for KDE Plasma: shows project.qml,
+# then applies the chosen mode with one atomic kscreen-doctor call.
+set -euo pipefail
+
+here=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
+
+# Pressing Meta+P while the panel is open closes it.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/win-kde-project.lock"
+if ! flock -n 9; then
+  pkill -f "$here/project.qml" || true
+  exit 0
+fi
+
+# internal (Panel = type 7) and external output, laptop logical width, current mode
+IFS=$'\t' read -r int ext width current < <(kscreen-doctor -j | jq -r '
+  [.outputs[] | select(.connected)] as $o
+  | ([$o[] | select(.type == 7)][0] // $o[0]) as $i
+  | ([$o[] | select(.id != $i.id)][0]) as $e
+  | (if $i.size.width > 0 then $i.size
+     else ([$i.modes[] | select(.id == $i.preferredModes[0]) | .size][0] // {width: 1920, height: 1080}) end) as $px
+  | ((if $i.rotation == 2 or $i.rotation == 8 then $px.height else $px.width end) / $i.scale | floor) as $w
+  | (if $e == null then "pc"
+     elif $e.enabled and $e.replicationSource == $i.id then "duplicate"
+     elif $e.enabled and $i.enabled then "extend"
+     elif $e.enabled then "second"
+     else "pc" end) as $cur
+  | [$i.name, ($e.name // "-"), $w, $cur] | @tsv')
+
+rc=0
+qml6 --transparent "$here/project.qml" -- "$current" "$([[ $ext == - ]] && echo 0 || echo 1)" 2>/dev/null || rc=$?
+
+i=output.$int e=output.$ext
+case $rc in
+  10) args=("$i.enable" "$i.mirror.none" "$i.position.0,0" "$i.priority.1")
+      [[ $ext == - ]] || args+=("$e.mirror.none" "$e.disable") ;;
+  11) args=("$i.enable" "$e.enable" "$i.mirror.none" "$e.mirror.$int" "$i.priority.1") ;;
+  12) args=("$i.enable" "$e.enable" "$i.mirror.none" "$e.mirror.none" "$i.position.0,0"
+            "$e.position.$width,0" "$i.priority.1" "$e.priority.2") ;;
+  13) args=("$e.enable" "$e.mirror.none" "$e.position.0,0" "$e.priority.1" "$i.disable") ;;
+  *) exit 0 ;;
+esac
+[[ $ext == - && $rc != 10 ]] && exit 0
+exec kscreen-doctor "${args[@]}"

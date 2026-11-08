@@ -9,6 +9,7 @@ Inside:
 - Aurorae window decorations
 - SDDM login screens and splash screens
 - Wallpapers
+- Meta+P screen switcher (PC only, Duplicate, Extend, Second screen only)
 
 ## Install
 
@@ -22,7 +23,7 @@ Inside:
 
 Packages: [Kvantum](https://github.com/tsujan/Kvantum) and [Klassy](https://github.com/paulmcauley/klassy) (used when installed).
 
-Pinned by `--deps`: [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Win11 Start menu](https://github.com/wOOtiTv/tv.wooti.win11menu).
+Pinned by `--deps`: [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-theme), [Win10OS cursors](https://github.com/yeyushengfan258/Win10OS-cursors), [Menu 11 Next](https://github.com/Eisteed/menu-11-next).
 
 ## Uninstall
 

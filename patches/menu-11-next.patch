@@ -1,0 +1,650 @@
+diff --git a/contents/ui/ActionMenu.qml b/contents/ui/ActionMenu.qml
+index be10f70..180d565 100644
+--- a/contents/ui/ActionMenu.qml
++++ b/contents/ui/ActionMenu.qml
+@@ -12,6 +12,16 @@ import org.kde.plasma.extras 2.0 as PlasmaExtras
+ Item {
+     id: root
+ 
++    // win-kde: Windows 11 wording for pinning
++    function win11Text(text) {
++        if (text === "Add to Favorites") return i18n("Pin to Start");
++        if (text === "Remove from Favorites") return i18n("Unpin from Start");
++        if (text === "Pin to Task Manager") return i18n("Pin to taskbar");
++        if (text === "Unpin from Task Manager") return i18n("Unpin from taskbar");
++        if (text && text.startsWith("Uninstall or Manage Add-Ons")) return i18n("Uninstall");
++        return text ? text : "";
++    }
++
+     property QtObject menu
+     property Item visualParent
+     property variant actionList
+@@ -54,8 +64,27 @@ Item {
+         fillMenu(menu, actionList);
+     }
+ 
++    // win-kde: Win11 keeps app menus short (pin, app tasks, uninstall)
++    readonly property var hiddenActions: ["addToDesktop", "addToPanel", "editApplication", "hideApplication",
++        "_kicker_recentDocument", "_kicker_forgetRecentDocuments", "forget", "forgetAll"]
++
++    function win11Items(items) {
++        var kept = [];
++        for (var i = 0; i < items.length; i++) {
++            var it = items[i];
++            if (hiddenActions.indexOf(it.actionId) !== -1) continue;
++            var divider = it.type === "separator" || it.type === "title";
++            if (divider && (kept.length === 0 || kept[kept.length - 1].type === "separator")) continue;
++            if (it.type === "title" && kept.length && kept[kept.length - 1].type === "title") kept.pop();
++            kept.push(it);
++        }
++        while (kept.length && (kept[kept.length - 1].type === "separator" || kept[kept.length - 1].type === "title"))
++            kept.pop();
++        return kept;
++    }
++
+     function fillMenu(menu, items) {
+-        items.forEach(function(actionItem) {
++        win11Items(Array.from(items)).forEach(function(actionItem) {
+             if (actionItem.subActions) {
+                 // This is a menu
+                 var submenuItem = contextSubmenuItemComponent.createObject(
+@@ -91,7 +120,7 @@ Item {
+ 
+             property variant actionItem
+ 
+-            text: actionItem.text ? actionItem.text : ""
++            text: root.win11Text(actionItem.text)
+             icon: actionItem.icon ? actionItem.icon : null
+ 
+             property PlasmaExtras.Menu submenu: PlasmaExtras.Menu {
+@@ -106,7 +135,7 @@ Item {
+         PlasmaExtras.MenuItem {
+             property variant actionItem
+ 
+-            text      : actionItem.text ? actionItem.text : ""
++            text      : root.win11Text(actionItem.text)
+             enabled   : actionItem.type !== "title" && ("enabled" in actionItem ? actionItem.enabled : true)
+             separator : actionItem.type === "separator"
+             section   : actionItem.type === "title"
+diff --git a/contents/ui/Footer.qml b/contents/ui/Footer.qml
+index 398348e..1a16588 100644
+--- a/contents/ui/Footer.qml
++++ b/contents/ui/Footer.qml
+@@ -19,6 +19,8 @@ import org.kde.plasma.components as PlasmaComponents3
+ 
+ import org.kde.kirigami as Kirigami
+ import org.kde.plasma.private.sessions
++import org.kde.kcmutils as KCM
++import org.kde.kirigamiaddons.components as KAComponents
+ 
+ RowLayout{
+ 
+@@ -32,6 +34,13 @@ RowLayout{
+     }
+ 
+     KCoreAddons.KUser {   id: kuser  }
++
++    // win-kde: Win11 account card (avatar, name, account type, manage link,
++    // sign out), without the Microsoft account parts.
++    Connections {
++        target: userArea.Window.window
++        function onVisibleChanged() { accountCard.visible = false }
++    }
+     //Logic {   id: logic }
+ 
+     SessionManagement {
+@@ -39,7 +48,89 @@ RowLayout{
+     }
+ 
+     Item {
++        id: userArea
+         implicitWidth: userInfoRow.implicitWidth
++
++        function openAccountCard() {
++            const p = userArea.mapToItem(accountCard.parent, 0, 0);
++            accountCard.x = p.x;
++            accountCard.y = p.y - accountCard.height - Kirigami.Units.largeSpacing;
++            accountCard.visible = true;
++        }
++
++        // win-kde: clicking anywhere outside the card closes it
++        MouseArea {
++            parent: userArea.Window.window ? userArea.Window.window.contentItem : userArea
++            anchors.fill: parent
++            z: 999
++            visible: accountCard.visible
++            onClicked: accountCard.visible = false
++        }
++
++        Rectangle {
++            id: accountCard
++            parent: userArea.Window.window ? userArea.Window.window.contentItem : userArea
++            visible: false
++            z: 1000
++            width: Math.max(Kirigami.Units.gridUnit * 18, cardRow.implicitWidth + Kirigami.Units.gridUnit * 2)
++            height: cardColumn.implicitHeight + Kirigami.Units.gridUnit * 1.5
++            radius: 8
++            color: Qt.lighter(Kirigami.Theme.backgroundColor, 1.3)
++            border.width: 1
++            border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
++
++            MouseArea { anchors.fill: parent } // clicks inside the card keep it open
++
++            ColumnLayout {
++                id: cardColumn
++                anchors { fill: parent; margins: Kirigami.Units.gridUnit * 0.75 }
++                spacing: Kirigami.Units.smallSpacing
++
++                PlasmaComponents3.ToolButton {
++                    Layout.alignment: Qt.AlignRight
++                    text: i18n("Sign out")
++                    visible: sessionManager.canLogout
++                    onClicked: { accountCard.visible = false; sessionManager.requestLogout(); }
++                }
++
++                RowLayout {
++                    id: cardRow
++                    spacing: Kirigami.Units.gridUnit
++
++                    KAComponents.Avatar {
++                        source: kuser.faceIconUrl
++                        name: kuser.fullName
++                        implicitWidth: Kirigami.Units.gridUnit * 4
++                        implicitHeight: implicitWidth
++                    }
++
++                    ColumnLayout {
++                        spacing: 0
++                        PlasmaExtras.Heading {
++                            level: 3
++                            font.weight: Font.DemiBold
++                            text: kuser.fullName
++                        }
++                        PlasmaComponents3.Label {
++                            text: i18n("Local account")
++                            opacity: 0.7
++                        }
++                        PlasmaComponents3.Label {
++                            text: i18n("Manage my account")
++                            color: Kirigami.Theme.highlightColor
++                            MouseArea {
++                                anchors.fill: parent
++                                cursorShape: Qt.PointingHandCursor
++                                onClicked: {
++                                    accountCard.visible = false;
++                                    KCM.KCMLauncher.openSystemSettings("kcm_users");
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
+         implicitHeight: userInfoRow.implicitHeight
+         Layout.alignment: Qt.AlignVCenter
+ 
+@@ -47,29 +138,19 @@ RowLayout{
+             id: userInfoRow
+             anchors.fill: parent
+ 
+-            Image {
++            KAComponents.Avatar {
+                 id: iconUser
+-                source: {
+-                    var faceUrl = kuser.faceIconUrl.toString()
+-                    if (faceUrl !== "") {
+-                        return faceUrl
+-                    }
+-                    return "file://usr/share/icons/breeze/apps/48/kuser.svg"
+-                }
+-                cache: false
+-                visible: source !== ""
+-                sourceSize.height: parent.height * 0.7
+-                sourceSize.width: parent.height * 0.7
+-                fillMode: Image.PreserveAspectFit
++                source: kuser.faceIconUrl
++                name: kuser.fullName
++                implicitWidth: Kirigami.Units.iconSizes.medium
++                implicitHeight: implicitWidth
+                 Layout.alignment: Qt.AlignVCenter
+-                layer.enabled: true
+             }
+ 
+             PlasmaExtras.Heading {
+                 wrapMode: Text.NoWrap
+                 color: Kirigami.Theme.textColor
+-                level: 3
+-                font.bold: true
++                level: 5
+                 text: qsTr(kuser.fullName)
+             }
+         }
+@@ -77,7 +158,7 @@ RowLayout{
+         MouseArea {
+             anchors.fill: parent
+             cursorShape: Qt.PointingHandCursor
+-            onClicked: Qt.openUrlExternally("file:///usr/share/applications/kcm_users.desktop")
++            onClicked: accountCard.visible ? (accountCard.visible = false) : userArea.openAccountCard()
+         }
+     }
+ 
+@@ -91,6 +172,7 @@ RowLayout{
+         icon.width: 24
+         icon.height: 24
+         icon.name:  "user-home"
++        visible: false // win-kde: Win11 footer is just the user and power
+         
+         Layout.leftMargin: 10
+         PlasmaComponents3.ToolTip.delay: 1000
+@@ -108,6 +190,7 @@ RowLayout{
+         icon.width: 24
+         icon.height: 24
+         icon.name: "configure"
++        visible: false
+         Layout.leftMargin: 10
+         PlasmaComponents3.ToolTip.delay: 1000
+         PlasmaComponents3.ToolTip.timeout: 1000
+@@ -130,13 +213,13 @@ RowLayout{
+         icon.width: 24
+         icon.height: 24
+         icon.name: "system-lock-screen"
++        visible: false // win-kde: one power button, as in Win11
+         
+         Layout.rightMargin: 10
+         PlasmaComponents3.ToolTip.delay: 1000
+         PlasmaComponents3.ToolTip.timeout: 1000
+         PlasmaComponents3.ToolTip.visible: hovered
+         PlasmaComponents3.ToolTip.text: i18n("Logout")
+-        visible: sessionManager.canLock
+     }
+     
+     PlasmaComponents3.ToolButton {
+@@ -148,12 +231,12 @@ RowLayout{
+         icon.width: 24
+         icon.height: 24
+         icon.name:  "system-suspend"
++        visible: false // win-kde: one power button, as in Win11
+         Layout.rightMargin: 10
+         PlasmaComponents3.ToolTip.delay: 1000
+         PlasmaComponents3.ToolTip.timeout: 1000
+         PlasmaComponents3.ToolTip.visible: hovered
+         PlasmaComponents3.ToolTip.text: i18n("Sleep")
+-        visible: sessionManager.canSuspend && Plasmoid.configuration.showSleepButton
+     }
+ 
+     PlasmaComponents3.ToolButton {
+@@ -165,19 +248,48 @@ RowLayout{
+         icon.width: 24
+         icon.height: 24
+         icon.name:  "system-reboot"
++        visible: false // win-kde: one power button, as in Win11
+         Layout.rightMargin: 10
+         PlasmaComponents3.ToolTip.delay: 1000
+         PlasmaComponents3.ToolTip.timeout: 1000
+         PlasmaComponents3.ToolTip.visible: hovered
+         PlasmaComponents3.ToolTip.text: i18n("Restart")
+-        visible: sessionManager.canReboot && Plasmoid.configuration.showRestartButton
+     }
+     PlasmaComponents3.ToolButton {
++        id: powerButton
+             MouseArea {
+                 cursorShape: Qt.PointingHandCursor
+                 anchors.fill: parent
+-                onClicked: sessionManager.requestShutdown()
++                onClicked: powerMenu.open(0, 0)
+                 }
++        // win-kde: native menu so it follows the color scheme (flips above the button)
++        PlasmaExtras.Menu {
++            id: powerMenu
++            visualParent: powerButton
++            PlasmaExtras.MenuItem {
++                text: i18n("Lock")
++                icon: "system-lock-screen"
++                visible: sessionManager.canLock
++                onClicked: sessionManager.lock()
++            }
++            PlasmaExtras.MenuItem {
++                text: i18n("Sleep")
++                icon: "system-suspend"
++                visible: sessionManager.canSuspend
++                onClicked: sessionManager.suspend()
++            }
++            PlasmaExtras.MenuItem {
++                text: i18n("Shut down")
++                icon: "system-shutdown"
++                onClicked: sessionManager.requestShutdown()
++            }
++            PlasmaExtras.MenuItem {
++                text: i18n("Restart")
++                icon: "system-reboot"
++                visible: sessionManager.canReboot
++                onClicked: sessionManager.requestReboot()
++            }
++        }
+         icon.width: 24
+         icon.height: 24
+         icon.name:  "system-shutdown"
+@@ -185,7 +297,7 @@ RowLayout{
+         PlasmaComponents3.ToolTip.delay: 1000
+         PlasmaComponents3.ToolTip.timeout: 1000
+         PlasmaComponents3.ToolTip.visible: hovered
+-        PlasmaComponents3.ToolTip.text: i18n("Shutdown")
++        PlasmaComponents3.ToolTip.text: i18n("Power")
+         visible: sessionManager.canShutdown && Plasmoid.configuration.showShutdownButton
+     }
+ 
+diff --git a/contents/ui/ItemGridDelegateColumns.qml b/contents/ui/ItemGridDelegateColumns.qml
+index f2246e5..502a6a6 100644
+--- a/contents/ui/ItemGridDelegateColumns.qml
++++ b/contents/ui/ItemGridDelegateColumns.qml
+@@ -49,6 +49,8 @@ Item {
+             return;
+         }
+         var actionList = (model.actionList !== undefined) ? model.actionList : [];
++        if (actionList.length === 0 && model.sourceRow !== undefined && GridView.view.model.sourceActions)
++            actionList = GridView.view.model.sourceActions(model.sourceRow);
+         Tools.fillActionMenu(i18n, actionMenu, actionList, GridView.view.model.favoritesModel, model.favoriteId);
+         actionMenu.visualParent = item;
+         actionMenu.open(x, y);
+diff --git a/contents/ui/MenuRepresentation.qml b/contents/ui/MenuRepresentation.qml
+index 8c74b66..16bd003 100644
+--- a/contents/ui/MenuRepresentation.qml
++++ b/contents/ui/MenuRepresentation.qml
+@@ -85,7 +85,7 @@ PlasmaCore.Dialog {
+     }
+ 
+     property int cellSizeHeight: iconSize + Kirigami.Units.gridUnit * 2 + (2 * Math.max(highlightItemSvg.margins.top + highlightItemSvg.margins.bottom, highlightItemSvg.margins.left + highlightItemSvg.margins.right))
+-    property int cellSizeWidth: cellSizeHeight + Kirigami.Units.gridUnit
++    property int cellSizeWidth: cellSizeHeight + Kirigami.Units.gridUnit / 2 // win-kde: Win11-sized grid
+ 
+     property bool searching: (searchField.text != "")
+ 
+@@ -102,6 +102,8 @@ PlasmaCore.Dialog {
+             var pos = popupPosition(width, height);
+             x = pos.x;
+             y = pos.y;
++            // win-kde: take focus so a click anywhere else closes the menu
++            root.requestActivate();
+             reset();
+             rootItem.loadFolders();
+             rootItem.loadAllAppsFolders();
+@@ -109,7 +111,7 @@ PlasmaCore.Dialog {
+             if (Plasmoid.configuration.allAppsViewMode === 2) {
+                 ensureCategoryModel();
+             }
+-            if (weatherCard) {
++            if (weatherCard && typeof weatherCard.updateWeather === "function") {
+                 weatherCard.updateWeather();
+             }
+             // Trigger periodic background update check (throttled to once per 24 hours)
+@@ -171,7 +173,7 @@ PlasmaCore.Dialog {
+         var screenGeom = kicker.screenGeometry;
+         var screen = Qt.rect(screenAvail.x + screenGeom.x, screenAvail.y + screenGeom.y, screenAvail.width, screenAvail.height);
+ 
+-        var offset = Kirigami.Units.smallSpacing;
++        var offset = 0; // flush against the taskbar and screen edge
+ 
+         // Fall back to bottom-left of screen area when the applet is on the desktop or floating.
+         var x = offset;
+@@ -189,12 +191,12 @@ PlasmaCore.Dialog {
+             horizMidPoint = screen.x + (screen.width / 2);
+             vertMidPoint = screen.y + (screen.height / 2);
+             x = horizMidPoint - width / 2;
+-            y = screen.y + screen.height - height - offset - panelSvg.margins.top;
++            y = screen.y + screen.height - height - offset;
+         } else if (Plasmoid.location === PlasmaCore.Types.BottomEdge) {
+             horizMidPoint = screen.x + (screen.width / 2);
+             appletTopLeft = parent.mapToGlobal(0, 0);
+             x = (appletTopLeft.x < horizMidPoint) ? screen.x + offset : (screen.x + screen.width) - width - offset;
+-            y = screen.y + screen.height - height - offset - panelSvg.margins.top;
++            y = screen.y + screen.height - height - offset;
+         } else if (Plasmoid.location === PlasmaCore.Types.TopEdge) {
+             horizMidPoint = screen.x + (screen.width / 2);
+             var appletBottomLeft = parent.mapToGlobal(0, parent.height);
+@@ -640,6 +642,20 @@ PlasmaCore.Dialog {
+             id: allAppsComboModel
+             // Exposes favoritesModel so delegates can Pin/Unpin via the same KActivities model
+             property var favoritesModel: sortedAppsModel.favoritesModel
++
++            // win-kde: these rows are copies without Plasma's app actions (Pin to
++            // Task Manager, Edit, Uninstall, ...); read and run them on the real model.
++            function sourceActions(sourceRow) {
++                if (sourceRow < 0 || !sortedAppsModel.sourceModel)
++                    return [];
++                return sortedAppsModel.data(sortedAppsModel.index(sourceRow, 0), Qt.UserRole + 9) || []; // ActionListRole
++            }
++            function trigger(row, actionId, argument) {
++                var entry = get(row);
++                if (entry && entry.sourceRow >= 0)
++                    sortedAppsModel.trigger(entry.sourceRow, actionId, argument);
++                return false;
++            }
+         }
+ 
+         PC3.TextField {
+@@ -653,7 +669,7 @@ PlasmaCore.Dialog {
+                 rightMargin: Kirigami.Units.gridUnit
+             }
+             focus: true
+-            placeholderText: i18n("Type here to search ...")
++            placeholderText: i18n("Search for apps, settings, and documents")
+             topPadding: 10
+             bottomPadding: 10
+             leftPadding: Kirigami.Units.gridUnit + Kirigami.Units.iconSizes.small
+@@ -902,7 +918,7 @@ PlasmaCore.Dialog {
+             width: rootItem.widthComputed / 0.1
+             height: (root.cellSizeHeight * Plasmoid.configuration.numberRows)
+                   + (topRow.height * 2)
+-                  + ((docsIconSize + Kirigami.Units.largeSpacing) * 5)
++                  + ((docsIconSize + Kirigami.Units.largeSpacing) * 3) // win-kde: Recommended shows 3 rows
+                   + (3 * Kirigami.Units.largeSpacing)
+                   + Kirigami.Units.gridUnit
+                   + Kirigami.Units.largeSpacing * 2
+@@ -937,13 +953,13 @@ PlasmaCore.Dialog {
+                             text: {
+                                 var first = menuUser.fullName.split(" ")[0];
+                                 return first.length > 0
+-                                    ? rootItem.timeGreeting + ", " + first
+-                                    : rootItem.timeGreeting;
++                                    ? i18n("Pinned")
++                                    : i18n("Pinned");
+                             }
+                         }
+ 
+                         Text {
+-                            text: i18n("Pinned")
++                            visible: false
+                             color: colorWithAlpha(Kirigami.Theme.textColor, 0.45)
+                             font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                         }
+@@ -954,6 +970,7 @@ PlasmaCore.Dialog {
+                     }
+ 
+                     PC3.ToolButton {
++                        visible: false // win-kde: Win11 header is just "Pinned" and "All"
+                         icon.name: "folder-new"
+                         display: AbstractButton.IconOnly
+                         PC3.ToolTip.text: i18n("New folder")
+@@ -970,7 +987,7 @@ PlasmaCore.Dialog {
+                         id: butttonActionAllApps
+                         flat: false
+                         iconName: "go-next"
+-                        text: i18n("All apps")
++                        text: i18n("All")
+                         buttonHeight: 25
+                         onClicked: {
+                             view.currentIndex = 1;
+@@ -1381,6 +1398,7 @@ PlasmaCore.Dialog {
+                         enabled: Plasmoid.configuration.showRecentDocs
+ 
+                         Kirigami.Icon {
++                            visible: false
+                             source: 'tag-recents'
+                             implicitHeight: Kirigami.Units.iconSizes.smallMedium
+                             implicitWidth: Kirigami.Units.iconSizes.smallMedium
+@@ -1389,7 +1407,7 @@ PlasmaCore.Dialog {
+                         PlasmaExtras.Heading {
+                             color: colorWithAlpha(Kirigami.Theme.textColor, 0.8)
+                             level: 5
+-                            text: i18n("Recent documents")
++                            text: i18n("Recommended")
+                             Layout.leftMargin: Kirigami.Units.smallSpacing
+                             font.weight: Font.Bold
+                         }
+diff --git a/contents/ui/code/UpdateChecker.js b/contents/ui/code/UpdateChecker.js
+index a04ea44..cc36ceb 100644
+--- a/contents/ui/code/UpdateChecker.js
++++ b/contents/ui/code/UpdateChecker.js
+@@ -1,147 +1,6 @@
+ .pragma library
+-
+-var updateCheckUrl = "https://api.github.com/repos/Eisteed/menu-11-next/releases/latest";
+-
+-function parseVersion(versionString) {
+-    // Remove 'v' prefix if present (v1.3.0 -> 1.3.0)
+-    var version = versionString.replace(/^v/, '');
+-    var parts = version.split('.');
+-    return {
+-        major: parseInt(parts[0]) || 0,
+-        minor: parseInt(parts[1]) || 0,
+-        patch: parseInt(parts[2]) || 0,
+-        full: version
+-    };
+-}
+-
+-function compareVersions(current, latest) {
+-    var cur = parseVersion(current);
+-    var lat = parseVersion(latest);
+-
+-    if (lat.major > cur.major) return 1;     // newer
+-    if (lat.major < cur.major) return -1;    // older
+-    if (lat.minor > cur.minor) return 1;
+-    if (lat.minor < cur.minor) return -1;
+-    if (lat.patch > cur.patch) return 1;
+-    if (lat.patch < cur.patch) return -1;
+-    return 0; // equal
+-}
+-
+-function fetchLatestRelease(callback) {
+-    var xhr = new XMLHttpRequest();
+-    xhr.timeout = 10000; // 10 second timeout
+-
+-    xhr.onreadystatechange = function() {
+-        if (xhr.readyState === XMLHttpRequest.DONE) {
+-            if (xhr.status === 200) {
+-                try {
+-                    var data = JSON.parse(xhr.responseText);
+-                    var result = {
+-                        success: true,
+-                        version: data.tag_name,
+-                        url: data.html_url,
+-                        releaseNotes: data.body || "",
+-                        publishedAt: data.published_at
+-                    };
+-                    callback(result);
+-                } catch(e) {
+-                    callback({
+-                        success: false,
+-                        error: "Failed to parse response: " + e.message
+-                    });
+-                }
+-            } else {
+-                callback({
+-                    success: false,
+-                    error: "HTTP " + xhr.status + ": " + xhr.statusText
+-                });
+-            }
+-        }
+-    };
+-
+-    xhr.onerror = function() {
+-        callback({
+-            success: false,
+-            error: "Network error: " + (xhr.statusText || "Connection failed")
+-        });
+-    };
+-
+-    xhr.ontimeout = function() {
+-        callback({
+-            success: false,
+-            error: "Request timeout"
+-        });
+-    };
+-
+-    try {
+-        xhr.open("GET", updateCheckUrl, true);
+-        xhr.send();
+-    } catch(e) {
+-        callback({
+-            success: false,
+-            error: "Failed to initiate request: " + e.message
+-        });
+-    }
+-}
+-
+-function checkForUpdates(currentVersion, callback) {
+-    fetchLatestRelease(function(release) {
+-        if (!release.success) {
+-            callback({
+-                success: false,
+-                error: release.error
+-            });
+-            return;
+-        }
+-
+-        var comparison = compareVersions(currentVersion, release.version);
+-        var result = {
+-            success: true,
+-            currentVersion: currentVersion,
+-            latestVersion: release.version,
+-            releaseUrl: release.url,
+-            releaseNotes: release.releaseNotes,
+-            updateAvailable: comparison < 0,
+-            error: null
+-        };
+-
+-        callback(result);
+-    });
+-}
+-
+-function shouldCheckForUpdates(plasmoidConfig) {
+-    // Get last check time from configuration (or default to 0)
+-    var lastCheckTime = plasmoidConfig.lastUpdateCheckTime || 0;
+-    var now = Math.floor(Date.now() / 1000); // Current time in seconds
+-    var checkInterval = 24 * 60 * 60; // 24 hours in seconds (1 day)
+-
+-    // Return true only if enough time has passed
+-    return (now - lastCheckTime) > checkInterval;
+-}
+-
+-function recordLastCheckTime(plasmoidConfig) {
+-    // Save current time to configuration
+-    plasmoidConfig.lastUpdateCheckTime = Math.floor(Date.now() / 1000);
+-}
+-
+-function formatUpdateStatus(checkResult, currentVersion) {
+-    if (!checkResult.success) {
+-        return {
+-            title: "Update Check Failed",
+-            subtitle: checkResult.error
+-        };
+-    }
+-
+-    if (checkResult.updateAvailable) {
+-        return {
+-            title: "Update Available: " + checkResult.latestVersion,
+-            subtitle: "Current: " + currentVersion,
+-            url: checkResult.releaseUrl
+-        };
+-    } else {
+-        return {
+-            title: "You're Up to Date",
+-            subtitle: "Version " + currentVersion
+-        };
+-    }
+-}
++// Stubbed by win-kde: no network update checks.
++function checkForUpdates(currentVersion, callback) {}
++function shouldCheckForUpdates(plasmoidConfig) { return false; }
++function recordLastCheckTime(plasmoidConfig) {}
++function formatUpdateStatus(checkResult, currentVersion) { return ""; }
