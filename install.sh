@@ -62,6 +62,8 @@ done
 ITEMS+=("screens|$DATA/win-kde")
 # Thin Win11 show desktop area for the end of the taskbar
 ITEMS+=("plasma/plasmoids/io.github.luisagd.win-kde.showdesktop|$DATA/plasma/plasmoids")
+# Claude/Codex usage left, next to the tray (data from the ai-usage script)
+ITEMS+=("plasma/plasmoids/io.github.luisagd.win-kde.aiusage|$DATA/plasma/plasmoids")
 # File Explorer style toolbar (user only; Dolphin ships its own copy in resources)
 ((EUID == 0)) || ITEMS+=("dolphin/dolphinui.rc|$DATA/kxmlgui5/dolphin")
 

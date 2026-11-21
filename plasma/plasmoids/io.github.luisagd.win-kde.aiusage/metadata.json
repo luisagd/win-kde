@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "luisagd" }],
+        "Category": "System Information",
+        "Description": "Claude and Codex usage left, coloured green to red",
+        "Icon": "utilities-system-monitor",
+        "Id": "io.github.luisagd.win-kde.aiusage",
+        "License": "GPL-3.0",
+        "Name": "AI Usage",
+        "Version": "1.0",
+        "Website": "https://github.com/luisagd/win-kde"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

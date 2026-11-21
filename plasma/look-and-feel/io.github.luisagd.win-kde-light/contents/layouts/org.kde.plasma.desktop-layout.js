@@ -1,5 +1,5 @@
 // Windows 11 style taskbar, left-aligned:
-// Start | pinned + running apps | system tray | clock | (invisible) show desktop
+// Start | pinned + running apps | AI usage | system tray | clock | (invisible) show desktop
 
 // First installed launcher wins; Kickoff ships with Plasma.
 const startMenus = ["menu.11.next", "org.kde.plasma.kickoff"];
@@ -24,6 +24,8 @@ tasks.currentConfigGroup = ["General"];
 tasks.writeConfig("launchers", "preferred://filemanager,preferred://browser");
 
 panel.addWidget("org.kde.plasma.marginsseparator");
+// Claude/Codex usage left, when installed (needs the ai-usage script).
+if (knownWidgetTypes.indexOf("io.github.luisagd.win-kde.aiusage") !== -1) panel.addWidget("io.github.luisagd.win-kde.aiusage");
 // Win11 tray: network, volume, battery and notifications; the rest under the ^.
 const tray = panel.addWidget("org.kde.plasma.systemtray");
 tray.currentConfigGroup = ["General"];
