@@ -1,0 +1,145 @@
+#!/bin/bash
+# A throwaway Plasma desktop in a window, for trying panel changes without
+# touching the real one: nested KWin + its own plasmashell, on its own D-Bus
+# session, with copies of your Plasma config (never written back).
+#
+#   tools/test-desktop start [--show] [WxH]  start it minimized (default 1600x900)
+#   tools/test-desktop show                  bring its window up to watch
+#   tools/test-desktop restart [--show]      reload, e.g. after editing a plasmoid
+#   tools/test-desktop open PLUGIN           open a panel widget's popup (plugin id)
+#   tools/test-desktop shot OUT.png          screenshot it (works while minimized)
+#   tools/test-desktop eval 'JS'             run a Plasma desktop script in it
+#   tools/test-desktop stop
+#
+# Plasma 6.8 is Wayland only, so X11 tools (xdotool, Xephyr) can't drive it;
+# popups are opened through their global shortcut instead of a click.
+# Fresh config: rm -r "$XDG_RUNTIME_DIR/win-kde-test-desktop".
+set -euo pipefail
+
+SELF=$(realpath "$0")
+STATE=${XDG_RUNTIME_DIR:-/tmp}/win-kde-test-desktop
+SOCKET=wayland-win-kde-test
+ENVF=$STATE/env
+# The nested KWin's window has no app id, only this caption.
+CAPTION="KDE Wayland Compositor"
+mkdir -p "$STATE"
+
+kwin_pid() { pgrep -f "^kwin_wayland .*--socket $SOCKET" | head -1; }
+
+need_running() {
+  [[ -s $ENVF && -n $(kwin_pid) ]] || { echo "test-desktop: not running (tools/test-desktop start)" >&2; exit 1; }
+  # shellcheck source=/dev/null
+  source "$ENVF"
+}
+
+# Run a KWin script in the real session (to minimize/show the test window).
+host_kwin() {
+  local name=win-kde-test-desktop-$1 file=$STATE/$1.js id
+  printf '%s\n' "$2" > "$file"
+  qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$name" > /dev/null 2>&1 || true
+  id=$(qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$file" "$name")
+  qdbus6 org.kde.KWin "/Scripting/Script$id" org.kde.kwin.Script.run
+}
+
+start() {
+  [[ -n $(kwin_pid) ]] && { echo "test-desktop: already running"; return; }
+  local show=0 size=1600x900 a
+  for a in "$@"; do [[ $a == --show ]] && show=1 || size=${a:-$size}; done
+  export XDG_CONFIG_HOME=$STATE/config XDG_CACHE_HOME=$STATE/cache
+  mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME"
+  local f
+  for f in kdeglobals plasmarc plasmashellrc plasma-org.kde.plasma.desktop-appletsrc kwinrc kcminputrc kglobalshortcutsrc Kvantum; do
+    [[ -e $HOME/.config/$f && ! -e $XDG_CONFIG_HOME/$f ]] && cp -r "$HOME/.config/$f" "$XDG_CONFIG_HOME/"
+  done
+  # Widgets that read ~/.cache (e.g. AI usage) get a copy of the real data.
+  [[ -e $HOME/.cache/ai-usage.json && ! -e $XDG_CACHE_HOME/ai-usage.json ]] && cp "$HOME/.cache/ai-usage.json" "$XDG_CACHE_HOME/"
+
+  # Minimize the window as soon as it appears, so it doesn't take the foreground.
+  ((show)) || host_kwin minimize "
+    const done = workspace.windowAdded.connect(w => {
+        if (w.caption.startsWith('$CAPTION')) { w.minimized = true; w.skipTaskbar = false; }
+    });"
+
+  rm -f "$ENVF"
+  setsid dbus-run-session -- kwin_wayland --width "${size%x*}" --height "${size#*x}" \
+    --socket "$SOCKET" --exit-with-session "$SELF _session" \
+    < /dev/null > "$STATE/kwin.log" 2>&1 &
+  local _
+  for _ in $(seq 30); do [[ -s $ENVF ]] && break; sleep 0.5; done
+  qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript win-kde-test-desktop-minimize > /dev/null 2>&1 || true
+  [[ -s $ENVF ]] || { echo "test-desktop: KWin didn't start, see $STATE/kwin.log" >&2; exit 1; }
+  sleep 6  # let plasmashell load the panel
+  echo "test-desktop: running$( ((show)) || echo ' (minimized; tools/test-desktop show)') - logs in $STATE"
+}
+
+show() {
+  need_running
+  host_kwin show "
+    for (const w of workspace.windowList())
+        if (w.caption.startsWith('$CAPTION')) { w.minimized = false; workspace.activeWindow = w; }"
+  qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript win-kde-test-desktop-show > /dev/null 2>&1 || true
+}
+
+session() {  # inside the nested KWin
+  printf 'export WAYLAND_DISPLAY=%q DBUS_SESSION_BUS_ADDRESS=%q XDG_CONFIG_HOME=%q XDG_CACHE_HOME=%q\n' \
+    "$WAYLAND_DISPLAY" "$DBUS_SESSION_BUS_ADDRESS" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" > "$ENVF"
+  QT_FORCE_STDERR_LOGGING=1 exec plasmashell --no-respawn > "$STATE/plasmashell.log" 2>&1
+}
+
+stop() {
+  local pid; pid=$(kwin_pid)
+  [[ -n $pid ]] && kill "$pid"
+  local _
+  for _ in $(seq 20); do [[ -z $(kwin_pid) ]] && break; sleep 0.5; done
+  rm -f "$ENVF"
+}
+
+js() {
+  need_running
+  qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$1"
+}
+
+shot() {
+  need_running
+  spectacle -b -n -f -o "$(realpath -m "$1")" > /dev/null 2>&1
+}
+
+open() {
+  # Popups open through "activate widget N", which exists only once the
+  # widget has a shortcut; give it one in the test config.
+  local id
+  id=$(js "for (const p of panels()) for (const w of p.widgets()) if (w.type === '$1') {
+             if (!w.globalShortcut) w.globalShortcut = 'Ctrl+Alt+Shift+F12'; print(w.id); }" | head -1)
+  [[ -n $id ]] || { echo "test-desktop: no panel widget $1" >&2; exit 1; }
+  local _
+  for _ in $(seq 20); do
+    qdbus6 org.kde.kglobalaccel /component/plasmashell org.kde.kglobalaccel.Component.shortcutNames \
+      | grep -qx "activate widget $id" && break
+    sleep 0.5
+  done
+  # A freshly started shell can ignore the first activation: retry until the
+  # screen actually changes.
+  local before=$STATE/open-before.png after=$STATE/open-after.png changed
+  shot "$before"
+  for _ in 1 2 3; do
+    qdbus6 org.kde.kglobalaccel /component/plasmashell org.kde.kglobalaccel.Component.invokeShortcut "activate widget $id"
+    sleep 1.5
+    shot "$after"
+    changed=$(magick compare -metric AE -fuzz 5% "$before" "$after" null: 2>&1 | cut -d' ' -f1 || true)
+    (( ${changed%.*} > 10000 )) && return
+  done
+  echo "test-desktop: $1 didn't open" >&2
+  exit 1
+}
+
+case ${1:-} in
+  start) shift; start "$@" ;;
+  show) show ;;
+  stop) stop ;;
+  restart) shift; stop; start "$@" ;;
+  open) open "${2:?plugin id}" ;;
+  shot) shot "${2:?output.png}"; echo "$2" ;;
+  eval) js "${2:?script}" ;;
+  _session) session ;;
+  *) sed -n '2,16p' "$SELF" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
