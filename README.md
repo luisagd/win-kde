@@ -31,6 +31,8 @@ Pinned by `--deps`: [Win11 icons](https://github.com/yeyushengfan258/Win11-icon-
 ./install.sh --uninstall --sddm
 ```
 
+`--uninstall` also removes what `--deps` installed (icons, cursors, Start menu) if an earlier `--deps` run left its marker in `~/.cache/win-kde/deps-installed`. Pass `--deps` as well to force it.
+
 ## Credits
 
 Fork of [Win11OS-kde](https://github.com/yeyushengfan258/Win11OS-kde) by yeyushengfan258. See [AUTHORS](AUTHORS).

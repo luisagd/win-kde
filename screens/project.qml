@@ -38,7 +38,7 @@ Window {
     property int selected: current
 
     function usable(i) { return hasExternal || modes[i].id === "pc"; }
-    function choose(i) { Qt.exit(i !== current && usable(i) ? modes[i].code : 0); }
+    function choose(i) { if (usable(i)) Qt.exit(i !== current ? modes[i].code : 0); }
     function move(step) {
         for (let n = 1; n <= modes.length; n++) {
             const i = (selected + step * n + modes.length * 4) % modes.length;

@@ -7,7 +7,8 @@ usage() {
 Usage: ./install.sh [options]
 
   -l, --link            symlink instead of copy (edits apply live; for development)
-  -u, --uninstall       remove everything this script installs
+  -u, --uninstall       remove everything this script installs, including the --deps
+                        pieces if an earlier run installed them
   -s, --sddm            also install the login screens (asks for sudo)
   -d, --deps            also install Win11 icons, Win10OS cursors and the Win11 Start menu
   -a, --apply VARIANT   apply the global theme afterwards: dark or light
@@ -25,7 +26,8 @@ while (($#)); do
     -u|--uninstall) MODE="uninstall" MODE_SET=1 ;;
     -s|--sddm) SDDM=1 ;;
     -d|--deps) DEPS=1 ;;
-    -a|--apply) APPLY=${2:-}; shift ;;
+    -a|--apply) (($# > 1)) || { echo "--apply takes dark or light" >&2; exit 2; }
+      APPLY=$2; shift ;;
     --layout) LAYOUT=1 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
@@ -67,6 +69,13 @@ ITEMS+=("plasma/plasmoids/io.github.luisagd.win-kde.showdesktop|$DATA/plasma/pla
 
 for item in "${ITEMS[@]}"; do
   src=$SRC/${item%%|*} dest=${item#*|}/$(basename "${item%%|*}")
+  if [[ $dest == */dolphinui.rc ]]; then # keep the user's own toolbar layout
+    if [[ -f $dest && ! -L $dest ]] && ! cmp -s "$src" "$dest"; then
+      cp -p "$dest" "$dest.bak"
+    elif [[ $MODE == uninstall && -f $dest.bak ]]; then
+      rm -rf "$dest"; mv "$dest.bak" "$dest"; continue
+    fi
+  fi
   rm -rf "$dest"
   case $MODE in
     copy) mkdir -p "${dest%/*}"; cp -r "$src" "$dest" ;;
@@ -108,19 +117,21 @@ fi
 # Third-party pieces, pinned to known-good commits.
 fetch() { # fetch <github owner/repo> <commit> -> prints checkout dir
   local dir=${XDG_CACHE_HOME:-$HOME/.cache}/win-kde/${1#*/}
-  [[ -d $dir/.git ]] || git clone -q "https://github.com/$1" "$dir"
-  git -C "$dir" fetch -q origin "$2" 2>/dev/null || true
-  git -C "$dir" -c advice.detachedHead=false checkout -q "$2"
+  [[ -d $dir/.git ]] || git clone -q "https://github.com/$1" "$dir" || return 1
+  git -C "$dir" fetch -q origin 2>/dev/null || true # abbreviated SHAs cannot be fetched by name
+  git -C "$dir" -c advice.detachedHead=false checkout -q "$2" || return 1
   echo "$dir"
 }
 
-if ((DEPS)); then
+deps_marker=${XDG_CACHE_HOME:-$HOME/.cache}/win-kde/deps-installed
+if ((DEPS)) || [[ $MODE == uninstall && -e $deps_marker ]]; then
   ICONS=$DATA/icons
   if [[ $MODE == uninstall ]]; then
     rm -rf "$ICONS/Win11" "$ICONS/Win11-dark" "$ICONS/Win10OS-cursors"
     kpackagetool6 --type Plasma/Applet --remove menu.11.next >/dev/null 2>&1 || true
+    rm -f "$deps_marker"
   else
-    icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da)
+    icons=$(fetch yeyushengfan258/Win11-icon-theme a5b460a407da) || exit 1
     mkdir -p "$ICONS"
     (cd "$icons" && ./install.sh -d "$ICONS" >/dev/null 2>&1)
     # The Win11 set also ships some file-type names (application-pdf, ...) as app
@@ -128,24 +139,29 @@ if ((DEPS)); then
     for theme in "$ICONS/Win11" "$ICONS/Win11-dark"; do
       find -L "$theme"/apps* \( -name 'application-*' -o -name 'gnome-mime-*' -o -name 'x-office-*' \) -print 2>/dev/null |
         while read -r f; do
-          [[ -n $(find -L "$theme"/mimes* -name "${f##*/}" -print -quit 2>/dev/null) ]] && rm -f "$f"
+          if [[ -n $(find -L "$theme"/mimes* -name "${f##*/}" -print -quit 2>/dev/null) ]]; then rm -f "$f"; fi
         done
     done
-    cursors=$(fetch yeyushengfan258/Win10OS-cursors 79d13bb90eb9)
+    cursors=$(fetch yeyushengfan258/Win10OS-cursors 79d13bb90eb9) || exit 1
+    [[ -d $cursors/dist ]] || { echo "Win10OS-cursors: dist/ missing" >&2; exit 1; }
     rm -rf "$ICONS/Win10OS-cursors"
     mkdir -p "$ICONS"
     cp -r "$cursors/dist" "$ICONS/Win10OS-cursors"
     # Win11 Start menu with Recommended, patched for Win11 wording and layout,
     # no update checks, and working links (patches/menu-11-next.patch).
-    menu=$(fetch Eisteed/menu-11-next eda5490)
+    menu=$(fetch Eisteed/menu-11-next eda5490) || exit 1
     git -C "$menu" checkout -q -- .
     git -C "$menu" apply "$SRC/patches/menu-11-next.patch"
     kpackagetool6 --type Plasma/Applet --upgrade "$menu" >/dev/null 2>&1 ||
       kpackagetool6 --type Plasma/Applet --install "$menu" >/dev/null
+    touch "$deps_marker" # lets a plain --uninstall remove these again
   fi
 fi
 
 if [[ $MODE == uninstall ]]; then
+  rm -f "$DATA/dolphin/view_properties/global/.directory"
+  kwriteconfig6 --file kglobalshortcutsrc --group services --group org.kde.plasma-systemmonitor.desktop --key _launch --delete 2>/dev/null || true
+  kwriteconfig6 --file kglobalshortcutsrc --group services --group io.github.luisagd.win-kde.project.desktop --key _launch --delete 2>/dev/null || true
   echo "Removed Win11 KDE."
   exit 0
 fi

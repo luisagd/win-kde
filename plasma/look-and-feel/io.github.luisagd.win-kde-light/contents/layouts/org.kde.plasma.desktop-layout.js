@@ -59,6 +59,8 @@ const desktopMenu = {
 };
 for (const desktop of desktopsForActivity(currentActivity())) {
     desktop.wallpaperPlugin = "org.kde.image";
-    desktop.currentConfigGroup = ["ActionPlugins", "0", "RightButton;NoModifier"];
-    for (const key in desktopMenu) desktop.writeConfig(key, desktopMenu[key]);
 }
+// Plasma reads the context menu plugins from the top-level [ActionPlugins][<type>][<trigger>]
+// group of the appletsrc, not from the containment's own group.
+const menuConfig = ConfigFile(ConfigFile(ConfigFile("plasma-org.kde.plasma.desktop-appletsrc", "ActionPlugins"), "0"), "RightButton;NoModifier");
+for (const key in desktopMenu) menuConfig.writeEntry(key, desktopMenu[key]);

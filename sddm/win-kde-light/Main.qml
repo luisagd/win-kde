@@ -21,7 +21,7 @@ Rectangle {
     readonly property string fontFamily: config.font || Qt.application.font.family
     readonly property url defaultFace: Qt.resolvedUrl("faces/.face.icon")
 
-    property bool locked: config.startUnlocked !== "true"
+    property bool locked: !["true", "1", "yes", "on"].includes(String(config.startUnlocked).trim().toLowerCase())
     property int userIndex: Math.max(0, userModel.lastIndex)
     property int sessionIndex: Math.max(0, sessionModel.lastIndex)
     property string message: ""
@@ -63,12 +63,20 @@ Rectangle {
     }
 
     Timer {
-        id: busy // guards double submits until SDDM answers
-        interval: 15000
+        id: busy // guards double submits until SDDM answers; the timeout is only a last resort
+        interval: 60000
+        onTriggered: {
+            root.message = qsTr("Sign-in timed out. Try again.");
+            password.text = "";
+            password.forceActiveFocus();
+        }
     }
 
     Connections {
         target: sddm
+        function onLoginSucceeded() {
+            busy.stop();
+        }
         function onLoginFailed() {
             busy.stop();
             root.message = qsTr("The password is incorrect. Try again.");
@@ -169,11 +177,12 @@ Rectangle {
         Image {
             id: avatarImage
             anchors.fill: parent
-            source: parent.source
+            property url failed
+            source: parent.source == failed ? root.defaultFace : parent.source
             sourceSize: Qt.size(width * 2, height * 2)
             fillMode: Image.PreserveAspectCrop
             visible: false
-            onStatusChanged: if (status === Image.Error && source != root.defaultFace) source = root.defaultFace
+            onStatusChanged: if (status === Image.Error && source != root.defaultFace) failed = source
         }
         Rectangle {
             id: avatarMask
@@ -298,6 +307,20 @@ Rectangle {
                 radius: 4 * root.s
                 color: index === root.userIndex ? Qt.rgba(1, 1, 1, 0.16)
                      : pick.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                border.width: activeFocus ? 2 * root.s : 0
+                border.color: "white"
+                activeFocusOnTab: true
+                function choose() {
+                    root.userIndex = index;
+                    root.message = "";
+                    password.text = "";
+                    password.forceActiveFocus();
+                }
+                Keys.onReturnPressed: choose()
+                Keys.onEnterPressed: choose()
+                Keys.onSpacePressed: choose()
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus()
+                Keys.onDownPressed: nextItemInFocusChain(true).forceActiveFocus()
 
                 Avatar {
                     id: smallFace
@@ -318,12 +341,7 @@ Rectangle {
                     id: pick
                     anchors.fill: parent
                     hoverEnabled: true
-                    onClicked: {
-                        root.userIndex = index;
-                        root.message = "";
-                        password.text = "";
-                        password.forceActiveFocus();
-                    }
+                    onClicked: choose()
                 }
             }
         }
@@ -338,7 +356,13 @@ Rectangle {
         implicitWidth: Math.max(height, row.implicitWidth + 20 * root.s)
         implicitHeight: 40 * root.s
         radius: 4 * root.s
-        color: area.pressed ? Qt.rgba(1, 1, 1, 0.06) : area.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+        color: area.pressed ? Qt.rgba(1, 1, 1, 0.06) : area.containsMouse || activeFocus ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+        border.width: activeFocus ? 2 * root.s : 0
+        border.color: "white"
+        activeFocusOnTab: true
+        Keys.onReturnPressed: clicked()
+        Keys.onEnterPressed: clicked()
+        Keys.onSpacePressed: clicked()
         Row {
             id: row
             anchors.centerIn: parent
@@ -370,6 +394,25 @@ Rectangle {
 
     component Menu: Rectangle {
         default property alias entries: list.children
+        property Item opener
+        function open() {
+            visible = true;
+            for (var i = 0; i < list.children.length; i++) {
+                var c = list.children[i];
+                if (c.visible && c.activeFocusOnTab) {
+                    c.forceActiveFocus();
+                    return;
+                }
+            }
+        }
+        function close() {
+            visible = false;
+            if (opener)
+                opener.forceActiveFocus();
+        }
+        Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus()
+        Keys.onDownPressed: nextItemInFocusChain(true).forceActiveFocus()
+        Keys.onEscapePressed: close()
         width: 200 * root.s
         height: list.implicitHeight + 8 * root.s
         radius: 8 * root.s
@@ -390,24 +433,27 @@ Rectangle {
         visible: !root.locked
 
         FlatButton {
+            id: sessionButton
             text: root.session ? root.session.sessionName : ""
             visible: sessions.count > 1
             onClicked: {
                 powerMenu.visible = false;
-                sessionMenu.visible = !sessionMenu.visible;
+                sessionMenu.visible ? sessionMenu.close() : sessionMenu.open();
             }
         }
         FlatButton {
+            id: powerButton
             iconSource: "assets/shutdown_primary.svgz"
             onClicked: {
                 sessionMenu.visible = false;
-                powerMenu.visible = !powerMenu.visible;
+                powerMenu.visible ? powerMenu.close() : powerMenu.open();
             }
         }
     }
 
     Menu {
         id: sessionMenu
+        opener: sessionButton
         anchors { right: corner.right; bottom: corner.top; bottomMargin: 8 * root.s }
         Repeater {
             model: sessionModel
@@ -417,7 +463,7 @@ Rectangle {
                 color: index === root.sessionIndex ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
                 onClicked: {
                     root.sessionIndex = index;
-                    sessionMenu.visible = false;
+                    sessionMenu.close();
                 }
             }
         }
@@ -425,6 +471,7 @@ Rectangle {
 
     Menu {
         id: powerMenu
+        opener: powerButton
         anchors { right: corner.right; bottom: corner.top; bottomMargin: 8 * root.s }
         FlatButton {
             width: powerMenu.width - 8 * root.s
