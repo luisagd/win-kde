@@ -8,37 +8,73 @@ here=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 # Pressing Meta+P while the panel is open closes it.
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/win-kde-project.lock"
 if ! flock -n 9; then
-  pkill -f "$here/project.qml" || true
+  pkill -f -- "$(sed 's/[][\.*^$+?(){}|]/\\&/g' <<<"$here")/project.qml" || true
   exit 0
 fi
 
-# internal (Panel = type 7) and external output, laptop logical width, current mode
-IFS=$'\t' read -r int ext width current < <(kscreen-doctor -j | jq -r '
-  [.outputs[] | select(.connected)] as $o
-  | ([$o[] | select(.type == 7)][0] // $o[0]) as $i
-  | ([$o[] | select(.id != $i.id)][0]) as $e
-  | (if $i.size.width > 0 then $i.size
-     else ([$i.modes[] | select(.id == $i.preferredModes[0]) | .size][0] // {width: 1920, height: 1080}) end) as $px
-  | ((if $i.rotation == 2 or $i.rotation == 8 then $px.height else $px.width end) / $i.scale | floor) as $w
-  | (if $e == null then "pc"
-     elif $e.enabled and $e.replicationSource == $i.id then "duplicate"
-     elif $e.enabled and $i.enabled then "extend"
-     elif $e.enabled then "second"
-     else "pc" end) as $cur
-  | [$i.name, ($e.name // "-"), $w, $cur] | @tsv')
+# internal (Panel = type 7), all external outputs as name:logical-width, the internal
+# logical width, current mode, and whether any output rectangles overlap.
+# JQ_BEGIN
+read -r -d '' filter <<'JQ' || true
+def px: . as $o
+  | if $o.size.width > 0 then $o.size
+    else ([$o.modes[] | select(.id == $o.preferredModes[0]) | .size][0] // {width: 1920, height: 1080}) end;
+def swap: .rotation == 2 or .rotation == 8;
+def lw: . as $o | px as $p | ((if $o | swap then $p.height else $p.width end) / $o.scale | round);
+def lh: . as $o | px as $p | ((if $o | swap then $p.width else $p.height end) / $o.scale | round);
+[.outputs[] | select(.connected)] as $o
+| ([$o[] | select(.type == 7)][0] // $o[0]) as $i
+| [$o[] | select(.id != $i.id)] as $e
+| [$e[] | select(.enabled)] as $on
+| [$o[] | {x: .pos.x, y: .pos.y, w: lw, h: lh}] as $r
+| (any(range(0; $r | length) as $a | range($a + 1; $r | length) as $b
+       | $r[$a] as $p | $r[$b] as $q
+       | $p.x < $q.x + $q.w and $q.x < $p.x + $p.w and $p.y < $q.y + $q.h and $q.y < $p.y + $p.h; .)) as $ov
+| (if ($on | length) == 0 then "pc"
+   elif ($i.enabled | not) then "second"
+   elif ($on | all(.replicationSource == $i.id)) then "duplicate"
+   else "extend" end) as $cur
+| [$i.name, (if ($e | length) == 0 then "-" else [$e[] | "\(.name):\(lw)"] | join(",") end),
+   ($i | lw), $cur, (if $ov then 1 else 0 end)] | @tsv
+JQ
+# JQ_END
+IFS=$'\t' read -r int exts width current overlap < <(kscreen-doctor -j | jq -r "$filter")
+
+names=() widths=()
+if [[ $exts != - ]]; then
+  IFS=, read -ra pairs <<<"$exts"
+  for p in "${pairs[@]}"; do names+=("${p%%:*}"); widths+=("${p##*:}"); done
+fi
 
 rc=0
-qml6 --transparent "$here/project.qml" -- "$current" "$([[ $ext == - ]] && echo 0 || echo 1)" 2>/dev/null || rc=$?
+qml6 --transparent "$here/project.qml" -- "$current" "$((${#names[@]} > 0))" 2>/dev/null || rc=$?
 
-i=output.$int e=output.$ext
+i=output.$int
+args=()
 case $rc in
   10) args=("$i.enable" "$i.mirror.none" "$i.position.0,0" "$i.priority.1")
-      [[ $ext == - ]] || args+=("$e.mirror.none" "$e.disable") ;;
-  11) args=("$i.enable" "$e.enable" "$i.mirror.none" "$e.mirror.$int" "$i.priority.1") ;;
-  12) args=("$i.enable" "$e.enable" "$i.mirror.none" "$e.mirror.none" "$i.position.0,0"
-            "$e.position.$width,0" "$i.priority.1" "$e.priority.2") ;;
-  13) args=("$e.enable" "$e.mirror.none" "$e.position.0,0" "$e.priority.1" "$i.disable") ;;
+      for n in "${names[@]}"; do args+=("output.$n.mirror.none" "output.$n.disable"); done ;;
+  11) args=("$i.enable" "$i.mirror.none" "$i.priority.1")
+      for n in "${names[@]}"; do args+=("output.$n.enable" "output.$n.mirror.$int"); done ;;
+  12) args=("$i.enable" "$i.mirror.none" "$i.priority.1")
+      # Keep the user's arrangement unless outputs overlap (e.g. coming from Duplicate):
+      # then lay the externals out left to right, right of the internal one.
+      ((overlap)) && args+=("$i.position.0,0")
+      x=$width
+      for k in "${!names[@]}"; do
+        n=output.${names[k]}
+        args+=("$n.enable" "$n.mirror.none" "$n.priority.$((k + 2))")
+        ((overlap)) && args+=("$n.position.$x,0")
+        x=$((x + widths[k]))
+      done ;;
+  13) x=0
+      for k in "${!names[@]}"; do
+        n=output.${names[k]}
+        args+=("$n.enable" "$n.mirror.none" "$n.position.$x,0" "$n.priority.$((k + 1))")
+        x=$((x + widths[k]))
+      done
+      args+=("$i.disable") ;;
   *) exit 0 ;;
 esac
-[[ $ext == - && $rc != 10 ]] && exit 0
+((${#names[@]} == 0 && rc != 10)) && exit 0
 exec kscreen-doctor "${args[@]}"

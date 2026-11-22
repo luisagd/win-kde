@@ -1,5 +1,6 @@
 // Render an SDDM theme without SDDM, using fake sddm/userModel/... objects.
 //   qml6 tools/sddm-preview.qml -- sddm/win-kde-dark out.png [lock|login]
+// The "--" is optional and the theme dir may be absolute.
 // With QT_QPA_PLATFORM=offscreen only layout renders; blur and round avatars need a GPU.
 import QtQuick
 import QtQuick.Window
@@ -10,8 +11,13 @@ Window {
     height: 1080
     visible: true
 
-    readonly property var args: Qt.application.arguments.slice(Qt.application.arguments.indexOf("--") + 1)
-    readonly property string themeDir: Qt.resolvedUrl("../" + args[0]).toString()
+    // Works with or without "--"; the theme path may be absolute or relative to the repo root.
+    readonly property var args: {
+        const a = Qt.application.arguments;
+        const i = a.indexOf("--");
+        return i >= 0 ? a.slice(i + 1) : a.slice(a.findIndex(x => /\.qml$/.test(x)) + 1);
+    }
+    readonly property string themeDir: (args[0].startsWith("/") ? "file://" + args[0] : Qt.resolvedUrl("../" + args[0])).replace(/\/$/, "")
     readonly property string out: args[1] || "preview.png"
     readonly property string mode: args[2] || "login"
 

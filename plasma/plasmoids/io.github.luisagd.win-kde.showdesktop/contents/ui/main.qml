@@ -35,7 +35,7 @@ PlasmoidItem {
         Layout.fillHeight: true
         hoverEnabled: true
 
-        onClicked: run.connectSource("qdbus6 org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut 'Show Desktop'")
+        onClicked: run.connectSource("q=qdbus6; command -v qdbus6 >/dev/null || q=qdbus; $q org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut 'Show Desktop'")
 
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
